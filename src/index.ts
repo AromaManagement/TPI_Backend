@@ -2,18 +2,21 @@ import "dotenv/config";
 import { prisma } from "./config/prisma.js";
 import app from "./app.js";
 
+const PORT = process.env.PORT || 5000;
+
 const main = async () => {
   try {
     await prisma.$connect();
-    console.log("¡DB connected!");
+    console.log("Conexión con la base de datos establecida correctamente.");
 
-    const port = process.env.PORT || 5000;
-
-    app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
+    app.listen(PORT, () => {
+      console.log(`Server started`);
     });
   } catch (error) {
-    console.error("DB connection falied", error);
+    console.error(
+      "Falló la conexión con la base de datos durante el inicio:",
+      error,
+    );
     process.exit(1);
   }
 };
