@@ -1,6 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import type { LoginDto } from "./dto/login.dto.js";
-import type { RegisterDto } from "./dto/register.dto.js";
+import type { LoginDto, RegisterDto } from "./auth.dto.js";
 import {
   ConflictError,
   NotFoundError,

@@ -20,3 +20,15 @@ export const CreateUserSchema = z.object({
 });
 
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
+
+export const UpdateUserSchema = CreateUserSchema.partial();
+
+export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
+
+export const UserParamsSchema = z.object({
+  userId: z
+    .string()
+    .regex(/^\d+$/, "El ID de usuario debe ser un número entero positivo"),
+});
+
+export type UserParamsDto = z.infer<typeof UserParamsSchema>;
