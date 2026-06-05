@@ -1,6 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import type { CreateRoleDto } from "./dto/create-role.dto.js";
-import type { UpdateRoleDto } from "./dto/update-role.dto.js";
+import type { CreateRoleDto, UpdateRoleDto } from "./role.dto.js";
 import { NotFoundError, ConflictError } from "../../shared/errors/app-error.js";
 
 const roleSelect = {

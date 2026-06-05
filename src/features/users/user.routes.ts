@@ -11,9 +11,11 @@ import {
   validateParams,
 } from "../../shared/middlewares/validation.middleware.js";
 import { authenticateJWT } from "../../shared/middlewares/auth.middleware.js";
-import { CreateUserSchema } from "./dto/create-user.dto.js";
-import { UpdateUserSchema } from "./dto/update-user.dto.js";
-import { UserParamsSchema } from "./dto/user-params.dto.js";
+import {
+  CreateUserSchema,
+  UpdateUserSchema,
+  UserParamsSchema,
+} from "./user.dto.js";
 
 const router = Router();
 

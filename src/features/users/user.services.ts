@@ -1,6 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import type { CreateUserDto } from "./dto/create-user.dto.js";
-import type { UpdateUserDto } from "./dto/update-user.dto.js";
+import type { CreateUserDto, UpdateUserDto } from "./user.dto.js";
 import { NotFoundError } from "../../shared/errors/app-error.js";
 import bcrypt from "bcrypt";
 

@@ -8,3 +8,15 @@ export const CreateRoleSchema = z.object({
 });
 
 export type CreateRoleDto = z.infer<typeof CreateRoleSchema>;
+
+export const UpdateRoleSchema = CreateRoleSchema.partial();
+
+export type UpdateRoleDto = z.infer<typeof UpdateRoleSchema>;
+
+export const RoleParamsSchema = z.object({
+  roleId: z
+    .string()
+    .regex(/^\d+$/, "El ID de rol debe ser un número entero positivo"),
+});
+
+export type RoleParamsDto = z.infer<typeof RoleParamsSchema>;
