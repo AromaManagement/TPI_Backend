@@ -5,7 +5,7 @@ import {
   createUserService,
   updateUserService,
   deleteUserService,
-} from "./user.services.js";
+} from "./usuario.services.js";
 
 export const createUser = async (req: Request, res: Response) => {
   const data = req.body;

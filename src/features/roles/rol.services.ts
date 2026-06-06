@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import type { CreateRoleDto, UpdateRoleDto } from "./role.dto.js";
+import type { CreateRoleDto, UpdateRoleDto } from "./rol.dto.js";
 import { NotFoundError, ConflictError } from "../../shared/errors/app-error.js";
 
 const roleSelect = {
@@ -60,7 +60,7 @@ export const updateRoleService = async (id: number, data: UpdateRoleDto) => {
     });
     if (duplicateRole) {
       throw new ConflictError(
-        `Ya existe otro rol con el nombre '${data.nombre}'.`
+        `Ya existe otro rol con el nombre '${data.nombre}'.`,
       );
     }
   }
@@ -79,7 +79,7 @@ export const deleteRoleService = async (id: number) => {
 
   if (!existingRole) {
     throw new NotFoundError(
-      `El rol con ID ${id} no existe y no se puede eliminar.`
+      `El rol con ID ${id} no existe y no se puede eliminar.`,
     );
   }
 
@@ -90,7 +90,7 @@ export const deleteRoleService = async (id: number) => {
 
   if (usersWithRoleCount > 0) {
     throw new ConflictError(
-      "No se puede eliminar el rol porque tiene usuarios activos asociados."
+      "No se puede eliminar el rol porque tiene usuarios activos asociados.",
     );
   }
 
