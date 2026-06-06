@@ -32,7 +32,7 @@ export const loginService = async (data: LoginDto) => {
   const token = jwt.sign(
     { id: user.id, correo: user.correo, rolId: user.rolId },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN as any }
+    { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
   );
 
   const { contrasena, ...userWithoutPassword } = user;
@@ -111,7 +111,7 @@ export const registerService = async (data: RegisterDto) => {
   const token = jwt.sign(
     { id: result.id, correo: result.correo, rolId: result.rolId },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN as any }
+    { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
   );
 
   const { contrasena, ...userWithoutPassword } = result;

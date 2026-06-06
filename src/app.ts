@@ -9,6 +9,10 @@ import personaRouter from "./features/personas/persona.routes.js";
 import tipoEmpleadoRouter from "./features/tipo-empleados/tipo-empleado.routes.js";
 import empleadoRouter from "./features/empleados/empleado.routes.js";
 import imagenRouter from "./features/imagenes/imagen.routes.js";
+import cartaRouter from "./features/cartas/carta.routes.js";
+import seccionRouter from "./features/secciones/seccion.routes.js";
+import platoRouter from "./features/platos/plato.routes.js";
+import platoArticuloRouter from "./features/plato-articulos/plato-articulo.routes.js";
 import { NotFoundError } from "./shared/errors/app-error.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 
@@ -25,6 +29,10 @@ app.use("/api/personas", personaRouter);
 app.use("/api/tipo-empleados", tipoEmpleadoRouter);
 app.use("/api/empleados", empleadoRouter);
 app.use("/api/imagenes", imagenRouter);
+app.use("/api/cartas", cartaRouter);
+app.use("/api/secciones", seccionRouter);
+app.use("/api/platos", platoRouter);
+app.use("/api/plato-articulos", platoArticuloRouter);
 
 app.all("*", (req, _res, next) => {
   next(

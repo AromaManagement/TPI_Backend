@@ -30,8 +30,7 @@ export const validateBody = (schema: ZodSchema) => {
 export const validateParams = (schema: ZodSchema) => {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
-      // parseAsync valida y tipa req.params
-      req.params = (await schema.parseAsync(req.params)) as any;
+      req.params = (await schema.parseAsync(req.params)) as Record<string, string>;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
