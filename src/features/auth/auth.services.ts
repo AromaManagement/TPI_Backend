@@ -30,9 +30,9 @@ export const loginService = async (data: LoginDto) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, correo: user.correo, rolId: user.rolId },
+    { id: user.id, correo: user.correo, rol: user.rol },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN as any }
+    { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
   );
 
   const { contrasena, ...userWithoutPassword } = user;
@@ -53,65 +53,31 @@ export const registerService = async (data: RegisterDto) => {
     throw new ConflictError("El correo ya está registrado.");
   }
 
-  // Usar una transacción para crear la persona y el usuario de manera atómica
-  const result = await prisma.$transaction(async (tx) => {
-    let rolId = data.rolId;
-    if (!rolId) {
-      let defaultRole = await tx.rol.findFirst({
-        where: { nombre: "Cliente", deletedAt: null },
-      });
-      if (!defaultRole) {
-        defaultRole = await tx.rol.create({
-          data: { nombre: "Cliente" },
-        });
-      }
-      rolId = defaultRole.id;
-    } else {
-      // Validar que el rol exista
-      const roleExists = await tx.rol.findUnique({
-        where: { id: rolId, deletedAt: null },
-      });
-      if (!roleExists) {
-        throw new NotFoundError(`El rol con ID ${rolId} no existe.`);
-      }
-    }
-
-    let personaId = data.personaId;
-    if (!personaId) {
-      const newPersona = await tx.persona.create({
-        data: {
-          nombre: data.nombre!,
-          apellido: data.apellido!,
-        },
-      });
-      personaId = newPersona.id;
-    } else {
-      const personaExists = await tx.persona.findUnique({
-        where: { id: personaId, deletedAt: null },
-      });
-      if (!personaExists) {
-        throw new NotFoundError(`La persona con ID ${personaId} no existe.`);
-      }
-    }
-
-    const hashedPassword = await bcrypt.hash(data.contrasena, 10);
-
-    const newUser = await tx.usuario.create({
-      data: {
-        correo: data.correo,
-        contrasena: hashedPassword,
-        rolId,
-        personaId,
-      },
+  // Validar existencia de la dirección si se provee
+  if (data.direccionId) {
+    const direccionExists = await prisma.direccion.findUnique({
+      where: { id: data.direccionId, deletedAt: null },
     });
+    if (!direccionExists) {
+      throw new NotFoundError(
+        `La dirección con ID ${data.direccionId} no existe.`
+      );
+    }
+  }
 
-    return newUser;
+  const hashedPassword = await bcrypt.hash(data.contrasena, 10);
+
+  const result = await prisma.usuario.create({
+    data: {
+      ...data,
+      contrasena: hashedPassword,
+    },
   });
 
   const token = jwt.sign(
-    { id: result.id, correo: result.correo, rolId: result.rolId },
+    { id: result.id, correo: result.correo, rol: result.rol },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN as any }
+    { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
   );
 
   const { contrasena, ...userWithoutPassword } = result;

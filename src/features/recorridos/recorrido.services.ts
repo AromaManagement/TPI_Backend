@@ -1,11 +1,12 @@
 import { prisma } from "../../config/prisma.js";
 import type { CreateRecorridoDto, UpdateRecorridoDto } from "./recorrido.dto.js";
-import { NotFoundError, ConflictError } from "../../shared/errors/app-error.js";
+import { NotFoundError } from "../../shared/errors/app-error.js";
 
 const recorridoSelect = {
   id: true,
   comandaAplicacionId: true,
-  recorridoId: true,
+  empleadoId: true,
+  estado: true,
   fechaFin: true,
   fechaIn: true,
   coordIn: true,
@@ -19,11 +20,12 @@ const recorridoSelect = {
       comandaId: true,
     },
   },
-  estadosRecorrido: {
-    where: { deletedAt: null },
+  empleado: {
     select: {
       id: true,
       nombre: true,
+      apellido: true,
+      rol: true,
     },
   },
 };
@@ -36,6 +38,17 @@ export const createRecorridoService = async (data: CreateRecorridoDto) => {
     if (!comandaAppExists) {
       throw new NotFoundError(
         `La comanda de aplicación con ID ${data.comandaAplicacionId} no existe.`
+      );
+    }
+  }
+
+  if (data.empleadoId) {
+    const empleadoExists = await prisma.usuario.findUnique({
+      where: { id: data.empleadoId, deletedAt: null },
+    });
+    if (!empleadoExists) {
+      throw new NotFoundError(
+        `El empleado (usuario) con ID ${data.empleadoId} no existe.`
       );
     }
   }
@@ -89,6 +102,17 @@ export const updateRecorridoService = async (
     }
   }
 
+  if (data.empleadoId) {
+    const empleadoExists = await prisma.usuario.findUnique({
+      where: { id: data.empleadoId, deletedAt: null },
+    });
+    if (!empleadoExists) {
+      throw new NotFoundError(
+        `El empleado (usuario) con ID ${data.empleadoId} no existe.`
+      );
+    }
+  }
+
   return await prisma.recorrido.update({
     where: { id },
     data,
@@ -104,17 +128,6 @@ export const deleteRecorridoService = async (id: number) => {
   if (!existingRecorrido) {
     throw new NotFoundError(
       `El recorrido con ID ${id} no existe y no se puede eliminar.`
-    );
-  }
-
-  // Verificar si hay estados de recorrido activos asociados
-  const activeEstadosCount = await prisma.estadoRecorrido.count({
-    where: { recorridoId: id, deletedAt: null },
-  });
-
-  if (activeEstadosCount > 0) {
-    throw new ConflictError(
-      "No se puede eliminar el recorrido porque tiene estados de recorrido asociados."
     );
   }
 

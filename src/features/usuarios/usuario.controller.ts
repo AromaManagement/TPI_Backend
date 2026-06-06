@@ -12,12 +12,10 @@ export const createUser = async (req: Request, res: Response) => {
 
   const newUser = await createUserService(data);
 
-  const { contrasena, ...userWithoutPassword } = newUser;
-
   res.status(201).json({
     status: "success",
     message: "Usuario creado exitosamente.",
-    data: userWithoutPassword,
+    data: newUser,
   });
 };
 

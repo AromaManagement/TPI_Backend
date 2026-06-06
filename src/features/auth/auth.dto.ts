@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Rol } from "@prisma/client";
 
 export const LoginSchema = z.object({
   correo: z
@@ -22,33 +23,35 @@ export const RegisterSchema = z.object({
     .string({ message: "La contraseña es requerida" })
     .min(6, "La contraseña debe tener al menos 6 caracteres")
     .max(255, "La contraseña no puede exceder los 255 caracteres"),
-  rolId: z
-    .number()
-    .int()
-    .positive()
-    .optional(),
-  personaId: z
-    .number()
-    .int()
-    .positive()
-    .optional(),
   nombre: z
-    .string()
-    .max(100, "El nombre no puede tener más de 100 caracteres")
-    .optional(),
+    .string({ message: "El nombre es requerido" })
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede tener más de 100 caracteres"),
   apellido: z
+    .string({ message: "El apellido es requerido" })
+    .min(2, "El apellido debe tener al menos 2 caracteres")
+    .max(100, "El apellido no puede tener más de 100 caracteres"),
+  tipoDocumento: z
     .string()
-    .max(100, "El apellido no puede tener más de 100 caracteres")
-    .optional(),
-}).refine(
-  (data) =>
-    data.personaId !== undefined ||
-    (data.nombre !== undefined && data.apellido !== undefined),
-  {
-    message:
-      "Debe proporcionar personaId, o en su defecto nombre y apellido para crear una nueva persona.",
-    path: ["personaId"],
-  }
-);
+    .max(50, "El tipo de documento no puede tener más de 50 caracteres")
+    .optional()
+    .nullable(),
+  documento: z
+    .string()
+    .max(50, "El documento no puede tener más de 50 caracteres")
+    .optional()
+    .nullable(),
+  nacimiento: z.coerce
+    .date({ message: "Fecha de nacimiento inválida" })
+    .optional()
+    .nullable(),
+  direccionId: z
+    .number()
+    .int("El ID de dirección debe ser un número entero")
+    .positive("El ID de dirección debe ser un número positivo")
+    .optional()
+    .nullable(),
+  rol: z.nativeEnum(Rol, { message: "El rol es requerido y debe ser un rol válido" }),
+});
 
 export type RegisterDto = z.infer<typeof RegisterSchema>;

@@ -101,14 +101,14 @@ export const deleteDireccionService = async (id: number) => {
     );
   }
 
-  // Verificar si hay personas activas asociadas a esta dirección
-  const activePersonasCount = await prisma.persona.count({
+  // Verificar si hay usuarios activos asociados a esta dirección
+  const activeUsuariosCount = await prisma.usuario.count({
     where: { direccionId: id, deletedAt: null },
   });
 
-  if (activePersonasCount > 0) {
+  if (activeUsuariosCount > 0) {
     throw new ConflictError(
-      "No se puede eliminar la dirección porque está asociada a personas activas."
+      "No se puede eliminar la dirección porque está asociada a usuarios activos."
     );
   }
 

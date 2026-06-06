@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EstadoRecorrido } from "@prisma/client";
 
 export const CreateRecorridoSchema = z.object({
   comandaAplicacionId: z
@@ -7,12 +8,13 @@ export const CreateRecorridoSchema = z.object({
     .positive("El ID de comanda de aplicación debe ser un número positivo")
     .optional()
     .nullable(),
-  recorridoId: z
+  empleadoId: z
     .number()
-    .int("El ID del sub-recorrido debe ser un número entero")
-    .positive("El ID del sub-recorrido debe ser un número positivo")
+    .int("El ID del empleado debe ser un número entero")
+    .positive("El ID del empleado debe ser un número positivo")
     .optional()
     .nullable(),
+  estado: z.nativeEnum(EstadoRecorrido).optional().nullable(),
   fechaFin: z.coerce
     .date({ message: "Fecha de fin inválida" })
     .optional()
