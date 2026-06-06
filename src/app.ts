@@ -26,7 +26,7 @@ app.use("/api/tipo-empleados", tipoEmpleadoRouter);
 app.use("/api/empleados", empleadoRouter);
 app.use("/api/imagenes", imagenRouter);
 
-app.all("*", (req, _res, next) => {
+app.all(/.*/, (req, _res, next) => {
   next(
     new NotFoundError(
       `No se puede encontrar ${req.originalUrl} en este servidor.`,
