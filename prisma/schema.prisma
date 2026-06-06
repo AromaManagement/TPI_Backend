@@ -12,10 +12,10 @@ datasource db {
 // ----------------------------
 
 enum Rol {
-  ADMINISTRATIVO
-  MOZO
+  ADMIN
+  CLIENTE
   COCINERO
-  DELIVERY
+  REPARTIDOR
 }
 
 enum EstadoComanda {
