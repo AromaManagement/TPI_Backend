@@ -5,7 +5,7 @@ import {
   getRoleByIdService,
   updateRoleService,
   deleteRoleService,
-} from "./role.services.js";
+} from "./rol.services.js";
 
 export const createRole = async (req: Request, res: Response) => {
   const data = req.body;

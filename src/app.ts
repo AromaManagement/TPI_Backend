@@ -6,6 +6,8 @@ import roleRouter from "./features/roles/role.routes.js";
 import localidadRouter from "./features/localidades/localidad.routes.js";
 import direccionRouter from "./features/direcciones/direccion.routes.js";
 import personaRouter from "./features/personas/persona.routes.js";
+import tipoEmpleadoRouter from "./features/tipo-empleados/tipo-empleado.routes.js";
+import empleadoRouter from "./features/empleados/empleado.routes.js";
 import { NotFoundError } from "./shared/errors/app-error.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 
@@ -19,6 +21,8 @@ app.use("/api/roles", roleRouter);
 app.use("/api/localidades", localidadRouter);
 app.use("/api/direcciones", direccionRouter);
 app.use("/api/personas", personaRouter);
+app.use("/api/tipo-empleados", tipoEmpleadoRouter);
+app.use("/api/empleados", empleadoRouter);
 
 app.all("*", (req, _res, next) => {
   next(

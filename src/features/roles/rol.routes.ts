@@ -5,7 +5,7 @@ import {
   getRoleById,
   updateRole,
   deleteRole,
-} from "./role.controller.js";
+} from "./rol.controller.js";
 import {
   validateBody,
   validateParams,
@@ -15,7 +15,7 @@ import {
   CreateRoleSchema,
   UpdateRoleSchema,
   RoleParamsSchema,
-} from "./role.dto.js";
+} from "./rol.dto.js";
 
 const router = Router();
 
@@ -31,7 +31,7 @@ router.put(
   "/:roleId",
   validateParams(RoleParamsSchema),
   validateBody(UpdateRoleSchema),
-  updateRole
+  updateRole,
 );
 
 router.delete("/:roleId", validateParams(RoleParamsSchema), deleteRole);
