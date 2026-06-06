@@ -247,12 +247,10 @@ model Imagen {
 // CARTA
 // ----------------------------
 model Carta {
-  id         Int       @id @default(autoincrement())
-  fechaDesde DateTime  @map("fecha_desde") @db.Date
-  fechaHasta DateTime? @map("fecha_hasta") @db.Date
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   secciones Secciones[]
 
