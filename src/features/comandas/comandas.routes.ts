@@ -1,10 +1,7 @@
 import { Router } from "express";
 import {
   createComanda,
-    getAllComandas,
-    getComandaById,
-    updateComanda,
-    deleteComanda,
+  getActiveComandaByClienteId,
 } from "./comandas.controller.js";
 import {
   validateBody,
@@ -21,18 +18,8 @@ const router = Router();
 
 router.use(authenticateJWT);
 
-router.post("/", validateBody(CreateComandaSchema), createComanda);
-router.get("/", getAllComandas);
+router.post("/",  createComanda);
+router.get("/active", getActiveComandaByClienteId);
 
-router.get("/:comandaId", validateParams(ComandaParamsSchema), getComandaById);
-
-router.put(
-    "/:comandaId",
-    validateParams(ComandaParamsSchema),
-    validateBody(UpdateComandaSchema),
-    updateComanda
-);
-
-router.delete("/:comandaId", validateParams(ComandaParamsSchema), deleteComanda);
 
 export default router;

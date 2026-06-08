@@ -19,6 +19,8 @@ const comandaSelect = {
     },
   },
   detalles: true,
+  direccion: true,
+  repartidor: true
 };
 
 export const createComandaService = async (data: CreateComandaDto) => {
@@ -101,3 +103,17 @@ export const deleteComandaService = async (id: number) => {
     select: comandaSelect,
   });
 };
+
+export const getActiveComandasByClienteIdService = async (clienteId: number) => {
+  return prisma.comanda.findMany({
+    where: {
+      clienteId,
+      deletedAt: null,
+      estadoComanda: {
+        not: "LISTO",
+      },
+    },
+    select: comandaSelect,
+    orderBy: { createdAt: "asc" },
+  });
+}

@@ -58,8 +58,6 @@ model Localidad {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  direcciones Direccion[]
-
   @@map("localidad")
 }
 
@@ -74,14 +72,12 @@ model Direccion {
   numeracion  String?   @db.VarChar(20)
   referencia  String?   @db.VarChar(255)
   casaDepto   String?   @map("casa_depto") @db.VarChar(50)
-  localidadId Int       @map("localidad_id")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  localidad          Localidad          @relation(fields: [localidadId], references: [id])
   usuarios           Usuario[]
-  comandasAplicacion ComandaAplicacion[]
+  comandas           Comanda[]
 
   @@map("direccion")
 }
@@ -107,7 +103,8 @@ model Usuario {
   direccion         Direccion?      @relation(fields: [direccionId], references: [id])
   ClienteComanda    Comanda[]       @relation("ClienteComanda")
   DetalleComanda    DetalleComanda[]
-  RecorridoEmpleado Recorrido[]
+  RepartidorComanda Comanda[]       
+
 
   @@map("usuario")
 }
@@ -265,30 +262,15 @@ model Comanda {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   deletedAt      DateTime?      @map("deleted_at")
+  direccionId    Int?           @map("direccion_id")
+  repartidorId   Int?           @map("repartidor_id")
 
   cliente           Usuario?          @relation(fields: [clienteId], references: [id], name: "ClienteComanda")
   detalles          DetalleComanda[]
-  comandaAplicacion ComandaAplicacion?
+  repartidor         Usuario?          @relation(fields: [repartidorId], references: [id])
+  direccion         Direccion?        @relation(fields: [direccionId], references: [id])
 
   @@map("comanda")
-}
-
-// ----------------------------
-// COMANDA APLICACION
-// ----------------------------
-model ComandaAplicacion {
-  id          Int       @id @default(autoincrement())
-  comandaId   Int       @unique @map("comanda_id")
-  direccionId Int?      @map("direccion_id")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-
-  comanda    Comanda     @relation(fields: [comandaId], references: [id])
-  direccion  Direccion?  @relation(fields: [direccionId], references: [id])
-  recorridos Recorrido[]
-
-  @@map("comanda_aplicacion")
 }
 
 // ----------------------------
@@ -311,24 +293,3 @@ model DetalleComanda {
   @@map("detalle_comanda")
 }
 
-// ----------------------------
-// RECORRIDO
-// ----------------------------
-model Recorrido {
-  id                  Int              @id @default(autoincrement())
-  comandaAplicacionId Int?             @map("comanda_aplicacion_id")
-  empleadoId          Int?             @map("empleado_id")
-  estado              EstadoRecorrido? @map("estado")
-  fechaFin            DateTime?        @map("fecha_fin") @db.Date
-  fechaIn             DateTime?        @map("fecha_in") @db.Date
-  coordIn             String?          @map("coord_in") @db.VarChar(100)
-  coordFin            String?          @map("coord_fin") @db.VarChar(100)
-  createdAt           DateTime         @default(now()) @map("created_at")
-  updatedAt           DateTime         @updatedAt @map("updated_at")
-  deletedAt           DateTime?        @map("deleted_at")
-
-  comandaAplicacion ComandaAplicacion? @relation(fields: [comandaAplicacionId], references: [id])
-  empleado          Usuario?           @relation(fields: [empleadoId], references: [id])
-
-  @@map("recorrido")
-}

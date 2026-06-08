@@ -5,63 +5,80 @@ import {
     createComandaService,
     updateComandaService,
     deleteComandaService,
-    } from "./comandas.services.js";
+    getActiveComandasByClienteIdService,
+} from "./comandas.services.js";
+import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
+import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
+import { getUserByIdService } from "../usuarios/usuario.services.js";
 
-export const createComanda = async (req: Request, res: Response) => {
-    const data = req.body;
+export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        if (req.user?.rol !== "CLIENTE") {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para crear una comanda.",
+            });
+        }
 
-    data.fechaSolicitud = new Date().toISOString(); 
-    data.clienteId = req.user?.id; 
+        // Get client to get direccionId
+        const cliente = await getUserByIdService(req.user.id);
+        if (!cliente || !cliente.direccionId) {
+            return res.status(404).json({
+                status: "error",
+                message: "Cliente no encontrado.",
+            });
+        }
 
-    const newComanda = await createComandaService(data);
+        const bodyValidado = CreateComandaSchema.parse(req.body);
 
-    res.status(201).json({
-        status: "success",
-        message: "Comanda creada exitosamente.",
-        data: newComanda,
-    });
+        const comandaData = {
+            ...bodyValidado,
+            clienteId: req.user.id,
+            estadoComanda: "SIN_ASIGNAR" as const,
+            direccionId: cliente.direccionId,
+        };
+
+        const newComanda = await createComandaService(comandaData);
+
+        return res.status(201).json({
+            status: "success",
+            message: "Comanda creada exitosamente.",
+            data: newComanda,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al crear la comanda.",
+        });
+    }
 };
 
-export const getAllComandas = async (req: Request, res: Response) => {
-    const comandas = await getAllComandasService();
-    
-    res.status(200).json({
-        status: "success",
-        message: "Comandas recuperadas exitosamente.",
-        data: comandas,
-    });
-}
 
-export const getComandaById = async (req: Request, res: Response) => {
-    const comandaId = parseInt(req.params.comandaId as string, 10);
-    const comanda = await getComandaByIdService(comandaId);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Comanda recuperada exitosamente.",
-        data: comanda,
-    });
-}
+export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const clienteId = req.user?.id;
+        if (!clienteId) {
+            return res.status(401).json({
+                status: "error",
+                message: "No estás autenticado.",
+            });
+        }
 
-export const updateComanda = async (req: Request, res: Response) => {
-    const comandaId = parseInt(req.params.comandaId as string, 10);
-    const data = req.body;
-    const updatedComanda = await updateComandaService(comandaId, data);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Comanda actualizada exitosamente.",
-        data: updatedComanda,
-    });
-}
+        const activeComandas = await getActiveComandasByClienteIdService(clienteId);
+        console.log("Comandas activas encontradas:", activeComandas);
 
-export const deleteComanda = async (req: Request, res: Response) => {
-    const comandaId = parseInt(req.params.comandaId as string, 10);
-    const deletedComanda = await deleteComandaService(comandaId);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Comanda eliminada exitosamente.",
-        data: deletedComanda,
-    });
+        return res.status(200).json({
+            status: "success",
+            data: activeComandas.length > 0 ? activeComandas[0] : null,
+        });
+
+
+    } catch (error) {
+        console.error("Error al obtener las comandas activas:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al obtener las comandas activas.",
+        });
+    }
 };
