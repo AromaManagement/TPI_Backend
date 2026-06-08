@@ -4,10 +4,16 @@ import {
     getComandaByIdService,
     createComandaService,
     getActiveComandasByClienteIdService,
+    getCommandasByEstadoService,
+    assignRepartidorToComandaService,
+    updateComandaEstadoService,
+    assignChefToComandaDetalleService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
+import { isArray } from "node:util";
+import { tr } from "zod/locales";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
     console.log("Intentando crear comanda con datos:", req.body);
@@ -77,6 +83,106 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al obtener las comandas activas.",
+        });
+    }
+};
+
+export const getCommandasByEstado = async (req: Request, res: Response) => {
+    try {
+        const estado = req.query.estado as string;
+        if (!estado) {
+            return res.status(400).json({
+                status: "error",
+                message: "El parámetro 'estado' es requerido.",
+            });
+        }
+
+        const comandas = await getCommandasByEstadoService(estado);
+        return res.status(200).json({
+            status: "success",
+            data: comandas,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al obtener las comandas por estado.",
+        });
+    }
+};
+
+export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+
+        const comandaId = isArray(req.body.comandaId) ? parseInt(req.body.comandaId[0]) : parseInt(req.body.comandaId);
+        const repartidorId = req.user?.id;
+
+        if (isNaN(comandaId) || !repartidorId) {
+            return res.status(400).json({
+                status: "error",
+                message: "IDs de comanda o repartidor inválidos.",
+            });
+        }
+
+        if (req.user?.rol !== "REPARTIDOR") {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para asignarte a una comanda.",
+            });
+        }
+
+        await assignRepartidorToComandaService(comandaId, repartidorId);
+        
+        // Update comanda estado to EN_CAMINO
+        const updatedComanda = await updateComandaEstadoService(comandaId, "EN_CAMINO");
+
+        return res.status(200).json({
+            status: "success",
+            data: updatedComanda,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al asignar el repartidor a la comanda.",
+        });
+    }
+};
+
+export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const comandaDetalleId = isArray(req.body.comandaDetalleId) ? parseInt(req.body.comandaDetalleId[0]) : parseInt(req.body.comandaDetalleId);
+        const chefId = req.user?.id;
+        
+        if (isNaN(comandaDetalleId) || !chefId) {
+            return res.status(400).json({
+                status: "error",
+                message: "IDs de comanda detalle o chef inválidos.",
+            });
+        }
+        
+        
+        if (req.user?.rol !== "COCINERO") {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para asignarte a un detalle de comanda.",
+            });
+        }
+
+
+        await assignChefToComandaDetalleService(comandaDetalleId, chefId);
+
+        const updatedComandaDetalle = await updateComandaEstadoService(comandaDetalleId, "EN_PREPARACION");
+
+        return res.status(200).json({
+            status: "success",
+            message: "Chef asignado al detalle de la comanda exitosamente.",
+            data: updatedComandaDetalle,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al asignar el chef al detalle de la comanda.",
         });
     }
 };

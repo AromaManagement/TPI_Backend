@@ -1,7 +1,8 @@
 import { prisma } from "../../config/prisma.js";
 import type { CreateComandaDto, UpdateComandaDto } from "./comanda.dto.js";
+import { EstadoComanda } from "@prisma/client";
 import { NotFoundError } from "../../shared/errors/app-error.js";
-import { de } from "zod/locales";
+import { de, es } from "zod/locales";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const comandaSelect = {
@@ -84,6 +85,7 @@ export const getAllComandasService = async () => {
   });
 };
 
+
 export const getComandaByIdService = async (id: number) => {
   const comanda = await prisma.comanda.findUnique({
     where: { id, deletedAt: null },
@@ -111,3 +113,67 @@ export const getActiveComandasByClienteIdService = async (clienteId: number) => 
     orderBy: { createdAt: "asc" },
   });
 }
+
+export const updateComandaEstadoService = async (id: number, nuevoEstado: string) => {
+  const comanda = await prisma.comanda.findUnique({
+    where: { id, deletedAt: null },
+  });
+  
+  if (!comanda) {
+    throw new NotFoundError(`La comanda con ID ${id} no existe.`);
+  }
+
+  return prisma.comanda.update({
+    where: { id },
+    data: { estadoComanda: nuevoEstado as EstadoComanda },
+    select: comandaSelect,
+  });
+};
+
+export const getCommandasByEstadoService = async (estado: string) => {
+  return prisma.comanda.findMany({
+    where: {
+      estadoComanda: estado as EstadoComanda,
+      deletedAt: null,
+    },
+    select: comandaSelect,
+    orderBy: { createdAt: "asc" },
+  });
+};
+
+export const assignRepartidorToComandaService = async (comandaId: number, repartidorId: number) => {
+  const comanda = await prisma.comanda.findUnique({
+    where: { id: comandaId, deletedAt: null },
+  });
+  
+  if (!comanda) {
+    throw new NotFoundError(`La comanda con ID ${comandaId} no existe.`);
+  }
+
+  return prisma.comanda.update({
+    where: { id: comandaId },
+    data: { repartidorId },
+    select: comandaSelect,
+  });
+};
+
+export const assignChefToComandaDetalleService = async (detalleComandaId: number, chefId: number) => {
+  const detalleComanda = await prisma.detalleComanda.findUnique({
+    where: { id: detalleComandaId },
+  });
+  
+  if (!detalleComanda) {
+    throw new NotFoundError(`El detalle de comanda con ID ${detalleComandaId} no existe.`);
+  }
+
+  return prisma.detalleComanda.update({
+    where: { id: detalleComandaId },
+    data: { empleadoId: chefId },
+    select: {
+      id: true,
+      platoId: true,
+      precioUnitario: true,
+      empleadoId: true,
+    },
+  });
+};
