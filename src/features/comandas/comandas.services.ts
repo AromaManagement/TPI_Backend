@@ -2,7 +2,6 @@ import { prisma } from "../../config/prisma.js";
 import type { CreateComandaDto, UpdateComandaDto } from "./comanda.dto.js";
 import { EstadoComanda } from "@prisma/client";
 import { NotFoundError } from "../../shared/errors/app-error.js";
-import { de, es } from "zod/locales";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const comandaSelect = {

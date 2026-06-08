@@ -1,5 +1,8 @@
 import express from "express";
 import cors from "cors";
+import { readFileSync } from "node:fs";
+import { load } from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 import authRouter from "./features/auth/auth.routes.js";
 import userRouter from "./features/usuarios/usuario.routes.js";
 import localidadRouter from "./features/localidades/localidad.routes.js";
@@ -12,6 +15,11 @@ import { errorHandler } from "./shared/middlewares/error-handler.js";
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+const swaggerSpec = load(
+  readFileSync(new URL("../openapi.yaml", import.meta.url), "utf8"),
+) as object;
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRouter);
 app.use("/api/usuarios", userRouter);

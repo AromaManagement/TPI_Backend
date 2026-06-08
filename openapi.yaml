@@ -1,0 +1,1400 @@
+openapi: 3.1.0
+
+info:
+  title: TPI Backend API
+  version: 0.1.0
+  description: |
+    API REST del sistema de gestión Aroma.
+    Autenticación via JWT Bearer token — obtenerlo con `POST /api/auth/login`.
+
+    ### Estado de implementación
+    | Tag | Estado |
+    |-----|--------|
+    | Auth | ✅ Implementado |
+    | Usuarios | ✅ Implementado |
+    | Localidades | ✅ Implementado |
+    | Direcciones | ✅ Implementado |
+    | Imágenes | ✅ Implementado |
+    | Comandas | ✅ Implementado |
+    | Carta / Secciones / Platos | 🔜 Pendiente |
+    | Stock / Artículos | 🔜 Pendiente |
+    | Recetas (PlatoArticulo) | 🔜 Pendiente |
+
+servers:
+  - url: http://localhost:5001/api
+    description: Desarrollo local
+
+tags:
+  - name: Auth
+    description: Login y registro de usuarios
+  - name: Usuarios
+    description: Gestión de usuarios del sistema (ADMIN, CLIENTE, COCINERO, REPARTIDOR)
+  - name: Localidades
+    description: Catálogo de localidades
+  - name: Direcciones
+    description: Direcciones de entrega
+  - name: Imágenes
+    description: Imágenes de platos (almacenadas como data URL o ruta)
+  - name: Comandas
+    description: Pedidos — ciclo de vida completo desde creación hasta entrega
+  - name: Carta
+    description: "[PENDIENTE] Carta, secciones y platos del menú"
+  - name: Stock
+    description: "[PENDIENTE] Artículos, stock y movimientos de inventario"
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Token obtenido con POST /auth/login. Incluirlo como: Authorization: Bearer {token}"
+
+  # -------------------------------------------------------------------------
+  # Schemas reutilizables
+  # -------------------------------------------------------------------------
+
+  schemas:
+
+    # --- Enums ---------------------------------------------------------------
+
+    Rol:
+      type: string
+      enum: [ADMIN, CLIENTE, COCINERO, REPARTIDOR]
+
+    EstadoComanda:
+      type: string
+      enum: [SIN_ASIGNAR, EN_COCINA, LISTO, EN_CAMINO, ENTREGADO, CANCELADO]
+      description: |
+        Ciclo de vida de una comanda:
+        `SIN_ASIGNAR` → `EN_COCINA` → `LISTO` → `EN_CAMINO` → `ENTREGADO`
+        En cualquier estado puede pasar a `CANCELADO`.
+
+    TipoMovimiento:
+      type: string
+      enum: [INGRESO, EGRESO, AJUSTE, MERMA]
+
+    UnidadMedida:
+      type: string
+      enum: [KG, G, L, ML, UNIDAD, PORCION]
+
+    # --- Timestamps ----------------------------------------------------------
+
+    Timestamps:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- Localidad -----------------------------------------------------------
+
+    Localidad:
+      allOf:
+        - $ref: "#/components/schemas/Timestamps"
+        - type: object
+          properties:
+            id:
+              type: integer
+            nombre:
+              type: string
+              maxLength: 150
+
+    # --- Dirección -----------------------------------------------------------
+
+    Direccion:
+      allOf:
+        - $ref: "#/components/schemas/Timestamps"
+        - type: object
+          properties:
+            id:
+              type: integer
+            barrio:
+              type: string
+              maxLength: 150
+              nullable: true
+            calle:
+              type: string
+              maxLength: 150
+              nullable: true
+            manzanaPiso:
+              type: string
+              maxLength: 50
+              nullable: true
+            numeracion:
+              type: string
+              maxLength: 20
+              nullable: true
+            referencia:
+              type: string
+              maxLength: 255
+              nullable: true
+            casaDepto:
+              type: string
+              maxLength: 50
+              nullable: true
+
+    # --- Usuario -------------------------------------------------------------
+
+    Usuario:
+      allOf:
+        - $ref: "#/components/schemas/Timestamps"
+        - type: object
+          properties:
+            id:
+              type: integer
+            correo:
+              type: string
+              format: email
+            nombre:
+              type: string
+            apellido:
+              type: string
+            rol:
+              $ref: "#/components/schemas/Rol"
+            tipoDocumento:
+              type: string
+              nullable: true
+            documento:
+              type: string
+              nullable: true
+            nacimiento:
+              type: string
+              format: date
+              nullable: true
+            direccionId:
+              type: integer
+              nullable: true
+
+    # --- Imagen --------------------------------------------------------------
+
+    Imagen:
+      allOf:
+        - $ref: "#/components/schemas/Timestamps"
+        - type: object
+          properties:
+            id:
+              type: integer
+            imagenSi:
+              type: string
+              description: Data URL (base64) o ruta de la imagen. Limitado a 500 caracteres en la DB actual.
+
+    # --- Comanda / Detalle ---------------------------------------------------
+
+    DetalleComanda:
+      type: object
+      properties:
+        id:
+          type: integer
+        comandaId:
+          type: integer
+        platoId:
+          type: integer
+        empleadoId:
+          type: integer
+          nullable: true
+          description: Chef asignado a preparar este ítem
+        precioUnitario:
+          type: number
+          format: decimal
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ComandaResumen:
+      description: Objeto de comanda con relaciones cargadas (retornado por todos los endpoints)
+      type: object
+      properties:
+        id:
+          type: integer
+        clienteId:
+          type: integer
+          nullable: true
+        estadoComanda:
+          $ref: "#/components/schemas/EstadoComanda"
+          nullable: true
+        fechaSolicitud:
+          type: string
+          format: date-time
+        fechaEntrega:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        cliente:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            nombre:
+              type: string
+            apellido:
+              type: string
+        repartidor:
+          $ref: "#/components/schemas/Usuario"
+          nullable: true
+        direccion:
+          $ref: "#/components/schemas/Direccion"
+          nullable: true
+        detalles:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetalleComanda"
+
+    # --- Respuestas genéricas ------------------------------------------------
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+        data:
+          description: Payload de la respuesta (varía por endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Descripción del error
+
+  # -------------------------------------------------------------------------
+  # Respuestas comunes
+  # -------------------------------------------------------------------------
+
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            message: No autorizado.
+
+    Forbidden:
+      description: El usuario no tiene el rol necesario
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ValidationError:
+      description: Body o parámetros inválidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+# ===========================================================================
+# Paths
+# ===========================================================================
+
+paths:
+
+  # -------------------------------------------------------------------------
+  # AUTH
+  # -------------------------------------------------------------------------
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo, contrasena]
+              properties:
+                correo:
+                  type: string
+                  format: email
+                  example: admin@aroma.com
+                contrasena:
+                  type: string
+                  minLength: 6
+                  example: "123456"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/Usuario"
+                      token:
+                        type: string
+                        description: JWT con 24h de expiración por defecto
+        "401":
+          description: Correo o contraseña incorrectos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar nuevo usuario
+      description: Crea un usuario con rol CLIENTE por defecto. No requiere autenticación.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo, contrasena, nombre, apellido]
+              properties:
+                correo:
+                  type: string
+                  format: email
+                contrasena:
+                  type: string
+                  minLength: 6
+                nombre:
+                  type: string
+                  maxLength: 100
+                apellido:
+                  type: string
+                  maxLength: 100
+                rol:
+                  $ref: "#/components/schemas/Rol"
+                  description: Opcional. Si se omite, se asigna CLIENTE.
+      responses:
+        "201":
+          description: Usuario creado y token generado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/Usuario"
+                      token:
+                        type: string
+        "409":
+          description: El correo ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # -------------------------------------------------------------------------
+  # USUARIOS
+  # -------------------------------------------------------------------------
+
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar todos los usuarios
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Usuario"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Usuarios]
+      summary: Crear usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo, contrasena, nombre, apellido]
+              properties:
+                correo:
+                  type: string
+                  format: email
+                contrasena:
+                  type: string
+                  minLength: 6
+                nombre:
+                  type: string
+                  maxLength: 100
+                apellido:
+                  type: string
+                  maxLength: 100
+                rol:
+                  $ref: "#/components/schemas/Rol"
+                tipoDocumento:
+                  type: string
+                  maxLength: 50
+                documento:
+                  type: string
+                  maxLength: 50
+                nacimiento:
+                  type: string
+                  format: date-time
+                direccionId:
+                  type: integer
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /usuarios/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Usuarios]
+      summary: Obtener usuario por ID
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Usuario"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Usuarios]
+      summary: Actualizar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Todos los campos son opcionales (PATCH semántico)
+              properties:
+                correo:
+                  type: string
+                  format: email
+                contrasena:
+                  type: string
+                  minLength: 6
+                nombre:
+                  type: string
+                apellido:
+                  type: string
+                rol:
+                  $ref: "#/components/schemas/Rol"
+                tipoDocumento:
+                  type: string
+                documento:
+                  type: string
+                nacimiento:
+                  type: string
+                  format: date-time
+                direccionId:
+                  type: integer
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Usuario"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Usuarios]
+      summary: Eliminar usuario (soft delete)
+      responses:
+        "200":
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # LOCALIDADES
+  # -------------------------------------------------------------------------
+
+  /localidades:
+    get:
+      tags: [Localidades]
+      summary: Listar localidades
+      responses:
+        "200":
+          description: Lista de localidades
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Localidad"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Localidades]
+      summary: Crear localidad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre]
+              properties:
+                nombre:
+                  type: string
+                  maxLength: 150
+      responses:
+        "201":
+          description: Localidad creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Localidad"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /localidades/{localidadId}:
+    parameters:
+      - name: localidadId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Localidades]
+      summary: Obtener localidad por ID
+      responses:
+        "200":
+          description: Localidad encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Localidad"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Localidades]
+      summary: Actualizar localidad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                  maxLength: 150
+      responses:
+        "200":
+          description: Localidad actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Localidad"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Localidades]
+      summary: Eliminar localidad (soft delete)
+      responses:
+        "200":
+          description: Localidad eliminada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # DIRECCIONES
+  # -------------------------------------------------------------------------
+
+  /direcciones:
+    get:
+      tags: [Direcciones]
+      summary: Listar direcciones
+      responses:
+        "200":
+          description: Lista de direcciones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Direccion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Direcciones]
+      summary: Crear dirección
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                barrio:
+                  type: string
+                  maxLength: 150
+                calle:
+                  type: string
+                  maxLength: 150
+                manzanaPiso:
+                  type: string
+                  maxLength: 50
+                numeracion:
+                  type: string
+                  maxLength: 20
+                referencia:
+                  type: string
+                  maxLength: 255
+                casaDepto:
+                  type: string
+                  maxLength: 50
+      responses:
+        "201":
+          description: Dirección creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Direccion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /direcciones/{direccionId}:
+    parameters:
+      - name: direccionId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Direcciones]
+      summary: Obtener dirección por ID
+      responses:
+        "200":
+          description: Dirección encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Direccion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Direcciones]
+      summary: Actualizar dirección
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Direccion"
+      responses:
+        "200":
+          description: Dirección actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Direccion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Direcciones]
+      summary: Eliminar dirección (soft delete)
+      responses:
+        "200":
+          description: Dirección eliminada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # IMÁGENES
+  # ⚠️  imagenSi es VARCHAR(500) en la DB — no alcanza para base64 de imágenes
+  #    reales. Pendiente migrar a TEXT o cambiar a URLs.
+  # -------------------------------------------------------------------------
+
+  /imagenes:
+    get:
+      tags: [Imágenes]
+      summary: Listar imágenes
+      responses:
+        "200":
+          description: Lista de imágenes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Imagen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Imágenes]
+      summary: Crear imagen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [imagenSi]
+              properties:
+                imagenSi:
+                  type: string
+                  description: "⚠️ Limitado a 500 chars en la DB actual"
+      responses:
+        "201":
+          description: Imagen creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Imagen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /imagenes/{imagenId}:
+    parameters:
+      - name: imagenId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Imágenes]
+      summary: Obtener imagen por ID
+      responses:
+        "200":
+          description: Imagen encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Imagen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Imágenes]
+      summary: Actualizar imagen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imagenSi:
+                  type: string
+      responses:
+        "200":
+          description: Imagen actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Imagen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Imágenes]
+      summary: Eliminar imagen (soft delete)
+      responses:
+        "200":
+          description: Imagen eliminada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # COMANDAS
+  # -------------------------------------------------------------------------
+
+  /comandas:
+    post:
+      tags: [Comandas]
+      summary: Crear comanda
+      description: |
+        Solo pueden crear comandas usuarios con rol **CLIENTE**.
+        El `clienteId` y `direccionId` se toman automáticamente del JWT — no se
+        envían en el body. La comanda se crea con estado `SIN_ASIGNAR`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [detalles]
+              properties:
+                detalles:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [platoId, cantidad]
+                    properties:
+                      platoId:
+                        type: integer
+                      cantidad:
+                        type: integer
+                        minimum: 1
+                      precioUnitario:
+                        type: number
+                        description: Opcional — si se omite se usa el precio del plato
+      responses:
+        "201":
+          description: Comanda creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/ComandaResumen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Solo CLIENTEs pueden crear comandas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cliente o plato no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /comandas/active:
+    get:
+      tags: [Comandas]
+      summary: Comanda activa del cliente autenticado
+      description: Devuelve la comanda más reciente no entregada del CLIENTE que hace la petición. Retorna `null` si no hay ninguna activa.
+      responses:
+        "200":
+          description: Comanda activa o null
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/ComandaResumen"
+                      - type: "null"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /comandas/estado/{estado}:
+    get:
+      tags: [Comandas]
+      summary: Listar comandas por estado
+      description: Usado por el panel de cocina y delivery para filtrar comandas.
+      parameters:
+        - name: estado
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EstadoComanda"
+          example: EN_COCINA
+      responses:
+        "200":
+          description: Lista de comandas con ese estado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ComandaResumen"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /comandas/assign-repartidor:
+    post:
+      tags: [Comandas]
+      summary: Asignarse como repartidor a una comanda
+      description: |
+        Solo usuarios con rol **REPARTIDOR**. El `repartidorId` se toma del JWT.
+        Al asignar, el estado de la comanda pasa automáticamente a `EN_CAMINO`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comandaId]
+              properties:
+                comandaId:
+                  type: integer
+                  description: ID de la comanda a tomar
+      responses:
+        "200":
+          description: Repartidor asignado y estado actualizado a EN_CAMINO
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/ComandaResumen"
+        "400":
+          description: IDs inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Solo REPARTIDOREs pueden usar este endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comandas/assign-chef:
+    post:
+      tags: [Comandas]
+      summary: Asignarse como chef a un detalle de comanda
+      description: Solo usuarios con rol **COCINERO**. El `chefId` se toma del JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [detalleComandaId]
+              properties:
+                detalleComandaId:
+                  type: integer
+                  description: ID del DetalleComanda a tomar
+      responses:
+        "200":
+          description: Chef asignado al detalle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/DetalleComanda"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Solo COCINEROs pueden usar este endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comandas/{id}/estado:
+    patch:
+      tags: [Comandas]
+      summary: Actualizar estado de una comanda
+      description: Avanza o retrocede el estado de la comanda.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID de la comanda
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nuevoEstado]
+              properties:
+                nuevoEstado:
+                  $ref: "#/components/schemas/EstadoComanda"
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/ComandaResumen"
+        "400":
+          description: ID o estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # CARTA / SECCIONES / PLATOS — PENDIENTE
+  # -------------------------------------------------------------------------
+
+  /carta:
+    get:
+      tags: [Carta]
+      summary: "[PENDIENTE] Obtener la carta completa con secciones y platos"
+      description: Requiere implementar la feature `carta` en el backend.
+      responses:
+        "501":
+          description: No implementado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /carta/secciones:
+    post:
+      tags: [Carta]
+      summary: "[PENDIENTE] Crear sección"
+      responses:
+        "501":
+          description: No implementado
+
+  /carta/secciones/{seccionId}/platos:
+    post:
+      tags: [Carta]
+      summary: "[PENDIENTE] Agregar plato a una sección"
+      parameters:
+        - name: seccionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+  /carta/platos/{platoId}:
+    put:
+      tags: [Carta]
+      summary: "[PENDIENTE] Actualizar plato"
+      parameters:
+        - name: platoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+    delete:
+      tags: [Carta]
+      summary: "[PENDIENTE] Eliminar plato"
+      parameters:
+        - name: platoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+  /carta/platos/{platoId}/receta:
+    put:
+      tags: [Carta]
+      summary: "[PENDIENTE] Definir receta de un plato (PlatoArticulo)"
+      parameters:
+        - name: platoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+  # -------------------------------------------------------------------------
+  # STOCK / ARTÍCULOS — PENDIENTE
+  # -------------------------------------------------------------------------
+
+  /stock/articulos:
+    get:
+      tags: [Stock]
+      summary: "[PENDIENTE] Listar artículos con stock actual"
+      responses:
+        "501":
+          description: No implementado
+
+    post:
+      tags: [Stock]
+      summary: "[PENDIENTE] Crear artículo"
+      responses:
+        "501":
+          description: No implementado
+
+  /stock/articulos/{articuloId}:
+    put:
+      tags: [Stock]
+      summary: "[PENDIENTE] Actualizar artículo"
+      parameters:
+        - name: articuloId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+    delete:
+      tags: [Stock]
+      summary: "[PENDIENTE] Eliminar artículo"
+      parameters:
+        - name: articuloId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "501":
+          description: No implementado
+
+  /stock/movimientos:
+    post:
+      tags: [Stock]
+      summary: "[PENDIENTE] Registrar movimiento de stock (INGRESO / EGRESO / AJUSTE / MERMA)"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [articuloId, tipoMov, cantidad, fecha]
+              properties:
+                articuloId:
+                  type: integer
+                tipoMov:
+                  $ref: "#/components/schemas/TipoMovimiento"
+                cantidad:
+                  type: number
+                  minimum: 0
+                fecha:
+                  type: string
+                  format: date
+      responses:
+        "501":
+          description: No implementado

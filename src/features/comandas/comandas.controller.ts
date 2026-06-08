@@ -1,6 +1,6 @@
 import type { Response, Request } from "express";
 import {
-  getAllComandasService,
+    getAllComandasService,
     getComandaByIdService,
     createComandaService,
     getActiveComandasByClienteIdService,
@@ -13,7 +13,6 @@ import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
 import { isArray } from "node:util";
-import { tr } from "zod/locales";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
     console.log("Intentando crear comanda con datos:", req.body);
@@ -89,7 +88,7 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
 
 export const getCommandasByEstado = async (req: Request, res: Response) => {
     try {
-        const estado = req.query.estado as string;
+        const estado = req.params.estado as string;
         if (!estado) {
             return res.status(400).json({
                 status: "error",
@@ -113,7 +112,7 @@ export const getCommandasByEstado = async (req: Request, res: Response) => {
 export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: Response) => {
     try {
 
-        const comandaId = req.query.comandaId as unknown as number;
+        const comandaId = Number(req.body.comandaId);
         const repartidorId = req.user?.id;
 
         if (isNaN(comandaId) || !repartidorId) {
@@ -131,7 +130,7 @@ export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: 
         }
 
         await assignRepartidorToComandaService(comandaId, repartidorId);
-        
+
         // Update comanda estado to EN_CAMINO
         const updatedComanda = await updateComandaEstadoService(comandaId, "EN_CAMINO");
 
@@ -150,17 +149,16 @@ export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: 
 
 export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const comandaDetalleId = req.query.detalleComandaId as unknown as number;
+        const comandaDetalleId = Number(req.body.detalleComandaId);
         const chefId = req.user?.id;
-        
+
         if (isNaN(comandaDetalleId) || !chefId) {
             return res.status(400).json({
                 status: "error",
                 message: "IDs de comanda detalle o chef inválidos.",
             });
         }
-        
-        
+
         if (req.user?.rol !== "COCINERO") {
             return res.status(403).json({
                 status: "error",
@@ -168,15 +166,12 @@ export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res:
             });
         }
 
-
-        await assignChefToComandaDetalleService(comandaDetalleId, chefId);
-
-        const updatedComandaDetalle = await updateComandaEstadoService(comandaDetalleId, "EN_PREPARACION");
+        const updatedDetalle = await assignChefToComandaDetalleService(comandaDetalleId, chefId);
 
         return res.status(200).json({
             status: "success",
             message: "Chef asignado al detalle de la comanda exitosamente.",
-            data: updatedComandaDetalle,
+            data: updatedDetalle,
         });
 
     } catch (error) {
@@ -189,9 +184,9 @@ export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res:
 
 export const updateComandaEstado = async (req: Request, res: Response) => {
     try {
-        const comandaId = req.query.comandaId as unknown as number;
-        const nuevoEstado = req.query.nuevoEstado as string;
-        
+        const comandaId = Number(req.params.id);
+        const nuevoEstado = req.body.nuevoEstado as string;
+
         if (isNaN(comandaId) || !nuevoEstado) {
             return res.status(400).json({
                 status: "error",
