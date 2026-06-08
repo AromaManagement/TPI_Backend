@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const RolEnum = z.enum(["ADMIN", "CLIENTE", "COCINERO", "REPARTIDOR"]);
+
 export const LoginSchema = z.object({
   correo: z
     .string({ message: "El correo es requerido" })
@@ -22,33 +24,13 @@ export const RegisterSchema = z.object({
     .string({ message: "La contraseña es requerida" })
     .min(6, "La contraseña debe tener al menos 6 caracteres")
     .max(255, "La contraseña no puede exceder los 255 caracteres"),
-  rolId: z
-    .number()
-    .int()
-    .positive()
-    .optional(),
-  personaId: z
-    .number()
-    .int()
-    .positive()
-    .optional(),
   nombre: z
-    .string()
-    .max(100, "El nombre no puede tener más de 100 caracteres")
-    .optional(),
+    .string({ message: "El nombre es requerido" })
+    .max(100, "El nombre no puede tener más de 100 caracteres"),
   apellido: z
-    .string()
-    .max(100, "El apellido no puede tener más de 100 caracteres")
-    .optional(),
-}).refine(
-  (data) =>
-    data.personaId !== undefined ||
-    (data.nombre !== undefined && data.apellido !== undefined),
-  {
-    message:
-      "Debe proporcionar personaId, o en su defecto nombre y apellido para crear una nueva persona.",
-    path: ["personaId"],
-  }
-);
+    .string({ message: "El apellido es requerido" })
+    .max(100, "El apellido no puede tener más de 100 caracteres"),
+  rol: RolEnum.optional(),
+});
 
 export type RegisterDto = z.infer<typeof RegisterSchema>;

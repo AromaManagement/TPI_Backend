@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,18 +8,44 @@ datasource db {
 }
 
 // ----------------------------
-// ROL
+// ENUMS
 // ----------------------------
-model Rol {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(100)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
 
-  usuarios Usuario[]
+enum Rol {
+  ADMIN
+  CLIENTE
+  COCINERO
+  REPARTIDOR
+}
 
-  @@map("rol")
+enum EstadoComanda {
+  SIN_ASIGNAR
+  ASIGNADO
+  EN_COCINA
+  LISTO
+}
+
+enum EstadoRecorrido {
+  PENDIENTE
+  EN_CAMINO
+  ENTREGADO
+  CANCELADO
+}
+
+enum TipoMov {
+  INGRESO
+  EGRESO
+  AJUSTE
+  MERMA
+}
+
+enum UnidadMedida {
+  KG
+  G
+  L
+  ML
+  UNIDAD
+  PORCION
 }
 
 // ----------------------------
@@ -58,120 +79,54 @@ model Direccion {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  localidad          Localidad           @relation(fields: [localidadId], references: [id])
-  personas           Persona[]
+  localidad          Localidad          @relation(fields: [localidadId], references: [id])
+  usuarios           Usuario[]
   comandasAplicacion ComandaAplicacion[]
 
   @@map("direccion")
 }
 
 // ----------------------------
-// PERSONA
+// USUARIO
 // ----------------------------
-model Persona {
+model Usuario {
   id            Int       @id @default(autoincrement())
+  contrasena    String    @db.VarChar(255)
+  correo        String    @unique @db.VarChar(150)
   nombre        String    @db.VarChar(100)
   apellido      String    @db.VarChar(100)
   tipoDocumento String?   @map("tipo_documento") @db.VarChar(50)
   documento     String?   @db.VarChar(50)
   nacimiento    DateTime? @db.Date
   direccionId   Int?      @map("direccion_id")
+  rol           Rol       @map("rol")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  direccion Direccion? @relation(fields: [direccionId], references: [id])
-  usuario   Usuario?
-  empleado  Empleado?
-  cliente   Cliente?
-
-  @@map("persona")
-}
-
-// ----------------------------
-// USUARIO
-// ----------------------------
-model Usuario {
-  id         Int       @id @default(autoincrement())
-  contrasena String    @db.VarChar(255)
-  correo     String    @unique @db.VarChar(150)
-  rolId      Int       @map("rol_id")
-  personaId  Int       @unique @map("persona_id")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
-
-  rol     Rol     @relation(fields: [rolId], references: [id])
-  persona Persona @relation(fields: [personaId], references: [id])
+  direccion         Direccion?      @relation(fields: [direccionId], references: [id])
+  ClienteComanda    Comanda[]       @relation("ClienteComanda")
+  DetalleComanda    DetalleComanda[]
+  RecorridoEmpleado Recorrido[]
 
   @@map("usuario")
-}
-
-// ----------------------------
-// TIPO EMPLEADO
-// ----------------------------
-model TipoEmpleado {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(100)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  empleados Empleado[]
-
-  @@map("tipo_empleado")
-}
-
-// ----------------------------
-// EMPLEADO
-// ----------------------------
-model Empleado {
-  id             Int       @id @default(autoincrement())
-  personaId      Int       @unique @map("persona_id")
-  tipoEmpleadoId Int       @map("tipo_empleado_id")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
-
-  persona      Persona      @relation(fields: [personaId], references: [id])
-  tipoEmpleado TipoEmpleado @relation(fields: [tipoEmpleadoId], references: [id])
-  comandas     Comanda[]
-
-  @@map("empleado")
-}
-
-// ----------------------------
-// UNIDAD MEDIDA
-// ----------------------------
-model UnidadMedida {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(100)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  articulos Articulo[]
-
-  @@map("unidad_medida")
 }
 
 // ----------------------------
 // ARTICULO
 // ----------------------------
 model Articulo {
-  id             Int       @id @default(autoincrement())
-  nombre         String    @db.VarChar(150)
-  descripcion    String?
-  esIngrediente  Boolean   @default(false) @map("es_ingrediente")
-  cantidad       Decimal?  @db.Decimal(10, 2)
-  unidadMedidaId Int?      @map("unidad_medida_id")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
+  id            Int           @id @default(autoincrement())
+  nombre        String        @db.VarChar(150)
+  descripcion   String?
+  esIngrediente Boolean       @default(false) @map("es_ingrediente")
+  unidadMedida  UnidadMedida? @map("unidad_medida")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
 
-  unidadMedida UnidadMedida?   @relation(fields: [unidadMedidaId], references: [id])
-  stock        Stock?
-  platos       PlatoArticulo[]
+  stock  Stock?
+  platos PlatoArticulo[]
 
   @@map("articulo")
 }
@@ -195,35 +150,19 @@ model Stock {
 }
 
 // ----------------------------
-// TIPO MOVIMIENTO
-// ----------------------------
-model TipoMov {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(100)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  movimientos MovimientoStock[]
-
-  @@map("tipo_mov")
-}
-
-// ----------------------------
 // MOVIMIENTO STOCK
 // ----------------------------
 model MovimientoStock {
   id        Int       @id @default(autoincrement())
   stockId   Int       @map("stock_id")
-  tipoMovId Int       @map("tipo_mov_id")
+  tipoMov   TipoMov   @map("tipo_mov")
   cantidad  Decimal   @db.Decimal(10, 2)
   fecha     DateTime  @db.Date
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  stock   Stock   @relation(fields: [stockId], references: [id])
-  tipoMov TipoMov @relation(fields: [tipoMovId], references: [id])
+  stock Stock @relation(fields: [stockId], references: [id])
 
   @@map("movimiento_stock")
 }
@@ -247,12 +186,10 @@ model Imagen {
 // CARTA
 // ----------------------------
 model Carta {
-  id         Int       @id @default(autoincrement())
-  fechaDesde DateTime  @map("fecha_desde") @db.Date
-  fechaHasta DateTime? @map("fecha_hasta") @db.Date
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   secciones Secciones[]
 
@@ -283,8 +220,8 @@ model Secciones {
 model Platos {
   id        Int       @id @default(autoincrement())
   seccionId Int       @map("seccion_id")
-  nombre    String?   @db.VarChar(150)
-  precio    Decimal?  @db.Decimal(10, 2)
+  nombre    String    @db.VarChar(150)
+  precio    Decimal   @db.Decimal(10, 2)
   detalle   String?
   imagenId  Int?      @map("imagen_id")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -306,6 +243,8 @@ model PlatoArticulo {
   platoId    Int      @map("plato_id")
   articuloId Int      @map("articulo_id")
   cantidad   Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   plato    Platos   @relation(fields: [platoId], references: [id])
   articulo Articulo @relation(fields: [articuloId], references: [id])
@@ -315,56 +254,21 @@ model PlatoArticulo {
 }
 
 // ----------------------------
-// ESTADO COMANDA
-// ----------------------------
-model EstadoComanda {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(100)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  comandas Comanda[]
-
-  @@map("estado_comanda")
-}
-
-// ----------------------------
-// CLIENTE
-// ----------------------------
-model Cliente {
-  id        Int       @id @default(autoincrement())
-  personaId Int       @unique @map("persona_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  persona  Persona   @relation(fields: [personaId], references: [id])
-  comandas Comanda[]
-
-  @@map("cliente")
-}
-
-// ----------------------------
 // COMANDA
 // ----------------------------
 model Comanda {
-  id              Int       @id @default(autoincrement())
-  empleadoId      Int?      @map("empleado_id")
-  clienteId       Int?      @map("cliente_id")
-  estadoComandaId Int?      @map("estado_comanda_id")
-  fechaSolicitud  DateTime  @default(now()) @map("fecha_solicitud")
-  fechaEntrega    DateTime? @map("fecha_entrega")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
+  id             Int            @id @default(autoincrement())
+  clienteId      Int?           @map("cliente_id")
+  estadoComanda  EstadoComanda? @map("estado_comanda")
+  fechaSolicitud DateTime       @default(now()) @map("fecha_solicitud")
+  fechaEntrega   DateTime?      @map("fecha_entrega")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
 
-  empleado           Empleado?           @relation(fields: [empleadoId], references: [id])
-  cliente            Cliente?            @relation(fields: [clienteId], references: [id])
-  estadoComanda      EstadoComanda?      @relation(fields: [estadoComandaId], references: [id])
-  detalles           DetalleComanda[]
-  comandaAplicacion  ComandaAplicacion?
-  comandaRestaurante ComandaRestaurante?
+  cliente           Usuario?          @relation(fields: [clienteId], references: [id], name: "ClienteComanda")
+  detalles          DetalleComanda[]
+  comandaAplicacion ComandaAplicacion?
 
   @@map("comanda")
 }
@@ -388,35 +292,21 @@ model ComandaAplicacion {
 }
 
 // ----------------------------
-// COMANDA RESTAURANTE
-// ----------------------------
-model ComandaRestaurante {
-  id        Int       @id @default(autoincrement())
-  comandaId Int       @unique @map("comanda_id")
-  mesaId    Int?      @map("mesa_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  comanda Comanda @relation(fields: [comandaId], references: [id])
-
-  @@map("comanda_restaurante")
-}
-
-// ----------------------------
 // DETALLE COMANDA
 // ----------------------------
 model DetalleComanda {
-  id        Int       @id @default(autoincrement())
-  comandaId Int       @map("comanda_id")
-  platoId   Int       @map("plato_id")
-  cantidad  Int       @default(1)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id             Int       @id @default(autoincrement())
+  comandaId      Int       @map("comanda_id")
+  empleadoId     Int?      @map("empleado_id")
+  platoId        Int       @map("plato_id")
+  precioUnitario Decimal   @db.Decimal(10, 2) @map("precio_unitario")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
-  comanda Comanda @relation(fields: [comandaId], references: [id])
-  plato   Platos  @relation(fields: [platoId], references: [id])
+  comanda  Comanda  @relation(fields: [comandaId], references: [id])
+  plato    Platos   @relation(fields: [platoId], references: [id])
+  empleado Usuario? @relation(fields: [empleadoId], references: [id])
 
   @@map("detalle_comanda")
 }
@@ -425,35 +315,20 @@ model DetalleComanda {
 // RECORRIDO
 // ----------------------------
 model Recorrido {
-  id                  Int       @id @default(autoincrement())
-  comandaAplicacionId Int?      @map("comanda_aplicacion_id")
-  recorridoId         Int?      @map("recorrido_id")
-  fechaFin            DateTime? @map("fecha_fin") @db.Date
-  fechaIn             DateTime? @map("fecha_in")
-  coordIn             String?   @map("coord_in") @db.VarChar(100)
-  coordFin            String?   @map("coord_fin") @db.VarChar(100)
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-  deletedAt           DateTime? @map("deleted_at")
+  id                  Int              @id @default(autoincrement())
+  comandaAplicacionId Int?             @map("comanda_aplicacion_id")
+  empleadoId          Int?             @map("empleado_id")
+  estado              EstadoRecorrido? @map("estado")
+  fechaFin            DateTime?        @map("fecha_fin") @db.Date
+  fechaIn             DateTime?        @map("fecha_in") @db.Date
+  coordIn             String?          @map("coord_in") @db.VarChar(100)
+  coordFin            String?          @map("coord_fin") @db.VarChar(100)
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  deletedAt           DateTime?        @map("deleted_at")
 
   comandaAplicacion ComandaAplicacion? @relation(fields: [comandaAplicacionId], references: [id])
-  estadosRecorrido  EstadoRecorrido[]
+  empleado          Usuario?           @relation(fields: [empleadoId], references: [id])
 
   @@map("recorrido")
-}
-
-// ----------------------------
-// ESTADO RECORRIDO
-// ----------------------------
-model EstadoRecorrido {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @db.VarChar(100)
-  recorridoId Int?      @map("recorrido_id")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-
-  recorrido Recorrido? @relation(fields: [recorridoId], references: [id])
-
-  @@map("estado_recorrido")
 }

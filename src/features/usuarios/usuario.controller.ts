@@ -5,19 +5,17 @@ import {
   createUserService,
   updateUserService,
   deleteUserService,
-} from "./user.services.js";
+} from "./usuario.services.js";
 
 export const createUser = async (req: Request, res: Response) => {
   const data = req.body;
 
   const newUser = await createUserService(data);
 
-  const { contrasena, ...userWithoutPassword } = newUser;
-
   res.status(201).json({
     status: "success",
     message: "Usuario creado exitosamente.",
-    data: userWithoutPassword,
+    data: newUser,
   });
 };
 

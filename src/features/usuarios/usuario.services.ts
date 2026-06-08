@@ -1,34 +1,45 @@
 import { prisma } from "../../config/prisma.js";
-import type { CreateUserDto, UpdateUserDto } from "./user.dto.js";
-import { NotFoundError } from "../../shared/errors/app-error.js";
+import type { CreateUserDto, UpdateUserDto } from "./usuario.dto.js";
+import { ConflictError, NotFoundError } from "../../shared/errors/app-error.js";
 import bcrypt from "bcrypt";
 
 const userSelect = {
   id: true,
   correo: true,
-  rolId: true,
-  personaId: true,
+  nombre: true,
+  apellido: true,
+  tipoDocumento: true,
+  documento: true,
+  nacimiento: true,
+  direccionId: true,
+  rol: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
 };
 
 export const createUserService = async (data: CreateUserDto) => {
-  const hashedPassword = await bcrypt.hash(data.contrasena, 10);
-
-  const newUser = await prisma.usuario.create({
-    data: {
-      ...data,
-      contrasena: hashedPassword,
-    },
+  const existing = await prisma.usuario.findUnique({
+    where: { correo: data.correo },
   });
 
-  return newUser;
+  if (existing) {
+    throw new ConflictError("El correo ya está registrado.");
+  }
+
+  const hashedPassword = await bcrypt.hash(data.contrasena, 10);
+
+  return prisma.usuario.create({
+    data: { ...data, contrasena: hashedPassword },
+    select: userSelect,
+  });
 };
 
 export const getAllUsersService = async () => {
-  return await prisma.usuario.findMany({
+  return prisma.usuario.findMany({
+    where: { deletedAt: null },
     select: userSelect,
+    orderBy: { createdAt: "asc" },
   });
 };
 
@@ -46,42 +57,39 @@ export const getUserByIdService = async (id: number) => {
 };
 
 export const updateUserService = async (id: number, data: UpdateUserDto) => {
-  const existingUser = await prisma.usuario.findUnique({
+  const existing = await prisma.usuario.findUnique({
     where: { id, deletedAt: null },
   });
 
-  if (!existingUser) {
+  if (!existing) {
     throw new NotFoundError(`El usuario con ID ${id} no existe.`);
   }
 
-  const updateData = { ...data };
+  const updateData: typeof data & { contrasena?: string } = { ...data };
 
   if (updateData.contrasena) {
     updateData.contrasena = await bcrypt.hash(updateData.contrasena, 10);
   }
 
-  const updatedUser = await prisma.usuario.update({
+  return prisma.usuario.update({
     where: { id },
     data: updateData,
     select: userSelect,
   });
-
-  return updatedUser;
 };
 
 export const deleteUserService = async (id: number) => {
-  const existingUser = await prisma.usuario.findUnique({
+  const existing = await prisma.usuario.findUnique({
     where: { id, deletedAt: null },
   });
 
-  if (!existingUser) {
-    throw new NotFoundError(
-      `El usuario con ID ${id} no existe y no se puede eliminar.`,
-    );
+  if (!existing) {
+    throw new NotFoundError(`El usuario con ID ${id} no existe.`);
   }
 
-  return await prisma.usuario.delete({
+  return prisma.usuario.update({
     where: { id },
+    data: { deletedAt: new Date() },
     select: userSelect,
   });
 };

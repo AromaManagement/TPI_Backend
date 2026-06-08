@@ -5,7 +5,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
-} from "./user.controller.js";
+} from "./usuario.controller.js";
 import {
   validateBody,
   validateParams,
@@ -15,7 +15,7 @@ import {
   CreateUserSchema,
   UpdateUserSchema,
   UserParamsSchema,
-} from "./user.dto.js";
+} from "./usuario.dto.js";
 
 const router = Router();
 
@@ -24,23 +24,15 @@ router.use(authenticateJWT);
 router.post("/", validateBody(CreateUserSchema), createUser);
 router.get("/", getAllUsers);
 
-router.get(
-  "/:userId", 
-  validateParams(UserParamsSchema), 
-  getUserById
-);
+router.get("/:userId", validateParams(UserParamsSchema), getUserById);
 
 router.put(
-  "/:userId", 
-  validateParams(UserParamsSchema), 
-  validateBody(UpdateUserSchema), 
-  updateUser
+  "/:userId",
+  validateParams(UserParamsSchema),
+  validateBody(UpdateUserSchema),
+  updateUser,
 );
 
-router.delete(
-  "/:userId", 
-  validateParams(UserParamsSchema), 
-  deleteUser
-);
+router.delete("/:userId", validateParams(UserParamsSchema), deleteUser);
 
 export default router;

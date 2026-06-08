@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const RolEnum = z.enum(["ADMIN", "CLIENTE", "COCINERO", "REPARTIDOR"]);
+
 export const CreateUserSchema = z.object({
   correo: z
     .string({ message: "El correo es requerido" })
@@ -9,19 +11,28 @@ export const CreateUserSchema = z.object({
     .string({ message: "La contraseña es requerida" })
     .min(6, "La contraseña debe tener al menos 6 caracteres")
     .max(255, "La contraseña no puede exceder los 255 caracteres"),
-  rolId: z
-    .number({ message: "El ID de rol es requerido" })
-    .int("El ID de rol debe ser un número entero")
-    .positive("El ID de rol debe ser un número positivo"),
-  personaId: z
-    .number({ message: "El ID de persona es requerido" })
-    .int("El ID de persona debe ser un número entero")
-    .positive("El ID de persona debe ser un número positivo"),
+  nombre: z
+    .string({ message: "El nombre es requerido" })
+    .max(100, "El nombre no puede tener más de 100 caracteres"),
+  apellido: z
+    .string({ message: "El apellido es requerido" })
+    .max(100, "El apellido no puede tener más de 100 caracteres"),
+  rol: RolEnum.default("CLIENTE"),
+  tipoDocumento: z.string().max(50).optional(),
+  documento: z.string().max(50).optional(),
+  nacimiento: z.string().datetime({ offset: true }).optional(),
+  direccionId: z.number().int().positive().optional(),
 });
 
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 
-export const UpdateUserSchema = CreateUserSchema.partial();
+export const UpdateUserSchema = CreateUserSchema.partial().extend({
+  contrasena: z
+    .string()
+    .min(6, "La contraseña debe tener al menos 6 caracteres")
+    .max(255)
+    .optional(),
+});
 
 export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 
