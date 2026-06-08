@@ -16,7 +16,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/roles", roleRouter);
 app.use("/api/localidades", localidadRouter);
 
-app.all("*", (req, _res, next) => {
+app.all("/", (req, _res, next) => {
   next(
     new NotFoundError(
       `No se puede encontrar ${req.originalUrl} en este servidor.`,
