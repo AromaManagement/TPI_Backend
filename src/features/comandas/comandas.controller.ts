@@ -113,7 +113,7 @@ export const getCommandasByEstado = async (req: Request, res: Response) => {
 export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: Response) => {
     try {
 
-        const comandaId = isArray(req.body.comandaId) ? parseInt(req.body.comandaId[0]) : parseInt(req.body.comandaId);
+        const comandaId = req.query.comandaId as unknown as number;
         const repartidorId = req.user?.id;
 
         if (isNaN(comandaId) || !repartidorId) {
@@ -150,7 +150,7 @@ export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: 
 
 export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const comandaDetalleId = isArray(req.body.comandaDetalleId) ? parseInt(req.body.comandaDetalleId[0]) : parseInt(req.body.comandaDetalleId);
+        const comandaDetalleId = req.query.detalleComandaId as unknown as number;
         const chefId = req.user?.id;
         
         if (isNaN(comandaDetalleId) || !chefId) {
@@ -183,6 +183,33 @@ export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res:
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al asignar el chef al detalle de la comanda.",
+        });
+    }
+};
+
+export const updateComandaEstado = async (req: Request, res: Response) => {
+    try {
+        const comandaId = req.query.comandaId as unknown as number;
+        const nuevoEstado = req.query.nuevoEstado as string;
+        
+        if (isNaN(comandaId) || !nuevoEstado) {
+            return res.status(400).json({
+                status: "error",
+                message: "ID de comanda o nuevo estado inválidos.",
+            });
+        }
+
+        const updatedComanda = await updateComandaEstadoService(comandaId, nuevoEstado);
+
+        return res.status(200).json({
+            status: "success",
+            data: updatedComanda,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al actualizar el estado de la comanda.",
         });
     }
 };
