@@ -77,6 +77,15 @@ components:
         `SIN_ASIGNAR` → `EN_COCINA` → `LISTO` → `EN_CAMINO` → `ENTREGADO`
         En cualquier estado puede pasar a `CANCELADO`.
 
+    EstadoDetalle:
+      type: string
+      enum: [SIN_ASIGNAR, EN_COCINA, LISTO]
+      description: |
+        Ciclo de vida de un ítem (DetalleComanda):
+        `SIN_ASIGNAR` (creado) → `EN_COCINA` (chef asignado) → `LISTO` (ítem terminado).
+        Cuando todos los detalles activos de una comanda llegan a `LISTO`, la comanda
+        pasa automáticamente a `LISTO`.
+
     TipoMovimiento:
       type: string
       enum: [INGRESO, EGRESO, AJUSTE, MERMA]
@@ -211,6 +220,8 @@ components:
         precioUnitario:
           type: number
           format: decimal
+        estadoDetalle:
+          $ref: "#/components/schemas/EstadoDetalle"
         createdAt:
           type: string
           format: date-time
@@ -1200,6 +1211,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comandas/detalles/{id}/completar:
+    patch:
+      tags: [Comandas]
+      summary: Marcar detalle como listo (COCINERO)
+      description: |
+        Pone el `estadoDetalle` del ítem en `LISTO`. Si todos los detalles activos
+        de la comanda quedan en `LISTO`, la comanda pasa automáticamente a `LISTO`.
+        Solo accesible para usuarios con rol **COCINERO**.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID del DetalleComanda
+      responses:
+        "200":
+          description: Detalle marcado como listo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/DetalleComanda"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 

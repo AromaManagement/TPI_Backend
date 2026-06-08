@@ -8,6 +8,7 @@ import {
     assignRepartidorToComandaService,
     updateComandaEstadoService,
     assignChefToComandaDetalleService,
+    completarDetalleService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
@@ -178,6 +179,33 @@ export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res:
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al asignar el chef al detalle de la comanda.",
+        });
+    }
+};
+
+export const completarDetalle = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const detalleId = Number(req.params.id);
+
+        if (isNaN(detalleId)) {
+            return res.status(400).json({
+                status: "error",
+                message: "ID de detalle inválido.",
+            });
+        }
+
+        const detalle = await completarDetalleService(detalleId);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Detalle marcado como listo.",
+            data: detalle,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al completar el detalle.",
         });
     }
 };

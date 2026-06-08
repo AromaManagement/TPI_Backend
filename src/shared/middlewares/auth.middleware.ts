@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import type { Response, NextFunction } from "express";
-import { UnauthorizedError } from "../errors/app-error.js";
-import type { AuthenticatedRequest, UserTokenPayload } from "../types/index.js";
+import { UnauthorizedError, ForbiddenError } from "../errors/app-error.js";
+import type { AuthenticatedRequest, UserTokenPayload, Rol } from "../types/index.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default_fallback_secret_key";
 
@@ -49,3 +49,11 @@ export const authenticateJWT = (
     );
   }
 };
+
+export const requireRole = (...roles: Rol[]) =>
+  (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.rol)) {
+      return next(new ForbiddenError("No tenés permisos para realizar esta acción."));
+    }
+    next();
+  };
