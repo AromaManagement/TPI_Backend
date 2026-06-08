@@ -1,11 +1,14 @@
+import { dir } from "node:console";
 import { z } from "zod";
 
 // Ajustá estos valores según lo que tengas definido en el enum EstadoComanda de tu schema.prisma
 const EstadoComandaEnum = z.enum([
   "SIN_ASIGNAR",
-  "ASIGNADO",
   "EN_COCINA",
-  "LISTO"
+  "LISTO",
+  "EN_CAMINO",
+  "ENTREGADO",
+  "CANCELADO"
 ]);
 
 export const CreateComandaSchema = z.object({
@@ -23,6 +26,27 @@ export const CreateComandaSchema = z.object({
     .string()
     .datetime({ offset: true, message: "El formato de la fecha de entrega es inválido" })
     .optional(),
+  direccionId: z
+    .number({ message: "El ID de la dirección debe ser un número" })
+    .int("El ID de la dirección debe ser un número entero")
+    .positive("El ID de la dirección debe ser positivo")
+    .optional(),
+  detalles: z.array(
+    z.object({
+        platoId: z
+            .number({ message: "El ID del plato debe ser un número" })
+            .int("El ID del plato debe ser un número entero")
+            .positive("El ID del plato debe ser positivo"),
+        cantidad: z
+            .number({ message: "La cantidad debe ser un número" })
+            .int("La cantidad debe ser un número entero")
+            .positive("La cantidad debe ser positiva"),
+        precioUnitario: z
+            .number({ message: "El precio unitario debe ser un número" })
+            .min(0, "El precio unitario debe ser positivo")
+            .optional(),
+    })
+  ),
 });
 
 export type CreateComandaDto = z.infer<typeof CreateComandaSchema>;

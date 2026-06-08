@@ -1,6 +1,8 @@
 import { prisma } from "../../config/prisma.js";
 import type { CreateComandaDto, UpdateComandaDto } from "./comanda.dto.js";
 import { NotFoundError } from "../../shared/errors/app-error.js";
+import { de } from "zod/locales";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const comandaSelect = {
   id: true,
@@ -24,6 +26,8 @@ const comandaSelect = {
 };
 
 export const createComandaService = async (data: CreateComandaDto) => {
+
+  console.log("Data recibida para crear comanda:", data);
   if (data.clienteId) {
     const cliente = await prisma.usuario.findUnique({
       where: { id: data.clienteId, deletedAt: null },
@@ -33,8 +37,41 @@ export const createComandaService = async (data: CreateComandaDto) => {
     }
   }
 
+ 
+
+ 
+  let detallesData = [];
+  for (const detalle of data.detalles) {
+    const plato = await prisma.platos.findUnique({
+      where: { id: detalle.platoId, deletedAt: null },
+    });
+
+
+    if (!plato) {
+      throw new NotFoundError(`El plato con ID ${detalle.platoId} no existe.`);
+    }
+
+    for (let i = 0; i < detalle.cantidad; i++) {
+      detallesData.push({
+        platoId: detalle.platoId,
+        precioUnitario: detalle.precioUnitario ?? plato.precio,
+      });
+    }
+  }
+
+
+
   return prisma.comanda.create({
-    data,
+    data: {
+      clienteId: data.clienteId,
+      estadoComanda: data.estadoComanda,
+      fechaSolicitud: data.fechaSolicitud,
+      fechaEntrega: data.fechaEntrega,
+      direccionId: data.direccionId,
+      detalles: {
+        create: detallesData,
+      },
+    },
     select: comandaSelect,
   });
 };
@@ -60,49 +97,6 @@ export const getComandaByIdService = async (id: number) => {
   return comanda;
 };
 
-export const updateComandaService = async (
-  id: number,
-  data: UpdateComandaDto,
-) => {
-  const existing = await prisma.comanda.findUnique({
-    where: { id, deletedAt: null },
-  });
-
-  if (!existing) {
-    throw new NotFoundError(`La comanda con ID ${id} no existe.`);
-  }
-
-  if (data.clienteId) {
-    const cliente = await prisma.usuario.findUnique({
-      where: { id: data.clienteId, deletedAt: null },
-    });
-    if (!cliente) {
-      throw new NotFoundError(`El cliente con ID ${data.clienteId} no existe.`);
-    }
-  }
-
-  return prisma.comanda.update({
-    where: { id },
-    data,
-    select: comandaSelect,
-  });
-};
-
-export const deleteComandaService = async (id: number) => {
-  const existing = await prisma.comanda.findUnique({
-    where: { id, deletedAt: null },
-  });
-
-  if (!existing) {
-    throw new NotFoundError(`La comanda con ID ${id} no existe.`);
-  }
-
-  return prisma.comanda.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-    select: comandaSelect,
-  });
-};
 
 export const getActiveComandasByClienteIdService = async (clienteId: number) => {
   return prisma.comanda.findMany({
@@ -110,7 +104,7 @@ export const getActiveComandasByClienteIdService = async (clienteId: number) => 
       clienteId,
       deletedAt: null,
       estadoComanda: {
-        not: "LISTO",
+        not: "ENTREGADO",
       },
     },
     select: comandaSelect,

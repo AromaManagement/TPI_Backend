@@ -20,9 +20,11 @@ enum Rol {
 
 enum EstadoComanda {
   SIN_ASIGNAR
-  ASIGNADO
   EN_COCINA
   LISTO
+  EN_CAMINO
+  ENTREGADO
+  CANCELADO
 }
 
 enum EstadoRecorrido {

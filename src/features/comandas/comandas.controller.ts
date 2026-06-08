@@ -3,8 +3,6 @@ import {
   getAllComandasService,
     getComandaByIdService,
     createComandaService,
-    updateComandaService,
-    deleteComandaService,
     getActiveComandasByClienteIdService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
@@ -12,6 +10,7 @@ import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
+    console.log("Intentando crear comanda con datos:", req.body);
     try {
         if (req.user?.rol !== "CLIENTE") {
             return res.status(403).json({
@@ -47,6 +46,7 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
         });
 
     } catch (error) {
+        console.error("Error al crear comanda:", error);
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al crear la comanda.",
@@ -66,7 +66,6 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
         }
 
         const activeComandas = await getActiveComandasByClienteIdService(clienteId);
-        console.log("Comandas activas encontradas:", activeComandas);
 
         return res.status(200).json({
             status: "success",
@@ -75,7 +74,6 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
 
 
     } catch (error) {
-        console.error("Error al obtener las comandas activas:", error);
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al obtener las comandas activas.",
