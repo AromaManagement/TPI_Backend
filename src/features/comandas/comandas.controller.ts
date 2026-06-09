@@ -14,6 +14,8 @@ import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type ComandaData, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
 import { CreateMPPreference } from "../../shared/utils/mercadoPago.js";
+import type { EstadoComanda, EstadoPago, MetodoPago } from "@prisma/client";
+import { createPagoService } from "../pago/pago.service.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
     console.log("Intentando crear comanda con datos:", req.body);
@@ -34,41 +36,70 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
             });
         }
 
-        const bodyValidado = CreateComandaSchema.parse(req.body);
+        
+
+        const metodoPago = req.body.metodoPago;
+        const comanda = CreateComandaSchema.parse(req.body);
+        const estadoComanda = metodoPago === "EFECTIVO" ? "SIN_ASIGNAR" as EstadoComanda : "SIN_PAGAR" as EstadoComanda;
 
         const comandaData = {
-            ...bodyValidado,
+            ...comanda,
             clienteId: req.user.id,
-            estadoComanda: "SIN_ASIGNAR" as const,
+            estadoComanda,
             direccionId: cliente.direccionId,
         };
 
         const newComanda = await createComandaService(comandaData);
 
-        console.log("Comanda creada exitosamente:", newComanda);
-        
-        // Crear preferencia de pago en MercadoPago
-        const comandaMp = {
-            id: newComanda.id,
-            detalles:  newComanda.detalles.map(detalle => ({
-                platoId: detalle.platoId,
-                platoNombre: 'Plato ' + detalle.platoId,
-                cantidad: 1,
-                precioUnitario: detalle.precioUnitario
-            }))
-        } as ComandaData;
+        // Crear pago
+        const callbackUrl = req.body.callbackUrl;
+        let urlPago = null;
 
-        console.log("Creando preferencia de MercadoPago para la comanda:", comandaMp);
+        if (metodoPago === "EFECTIVO") {
+            const pago = {
+                comandaId: newComanda.id,
+                monto: 0,
+                metodoPago: "EFECTIVO" as MetodoPago,
+                estadoPago: "PENDIENTE" as EstadoPago,
+            }
 
-        const mpPreference = await CreateMPPreference(comandaMp);
+            await createPagoService(pago);
+        } else if (metodoPago === "MERCADOPAGO") {
+           // Crear preferencia de pago en MercadoPago
+            const comandaMp = {
+                id: newComanda.id,
+                detalles:  newComanda.detalles.map(detalle => ({
+                    platoId: detalle.platoId,
+                    platoNombre: 'Plato ' + detalle.platoId,
+                    cantidad: 1,
+                    precioUnitario: detalle.precioUnitario
+                }))
+            } as ComandaData;
 
-        console.log("Preferencia de MercadoPago creada:", mpPreference);
+            const mpPreference = await CreateMPPreference(comandaMp, callbackUrl);
+            urlPago = mpPreference.init_point;
+
+            const pago = {
+                comandaId: newComanda.id,
+                monto: comandaMp.detalles.reduce((total, detalle) => total + (detalle.cantidad * Number(detalle.precioUnitario)), 0),
+                metodoPago: "MERCADOPAGO" as MetodoPago,
+                estadoPago: "PENDIENTE" as EstadoPago,
+                provedorId: mpPreference.id
+            }
+
+            await createPagoService(pago);
+        } else {
+            return res.status(400).json({
+                status: "error",
+                message: "Método de pago no soportado.",
+            });
+        }
 
 
         return res.status(201).json({
             status: "success",
             message: "Comanda creada exitosamente.",
-            data: newComanda,
+            data: {...newComanda, urlPago},
         });
 
     } catch (error) {

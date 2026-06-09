@@ -1,0 +1,8 @@
+-- CreateEnum
+CREATE TYPE "EstadoPago" AS ENUM ('PENDIENTE', 'APROBADO', 'RECHAZADO', 'CANCELADO');
+
+-- CreateEnum
+CREATE TYPE "MetodoPago" AS ENUM ('EFECTIVO', 'MERCADOPAGO');
+
+-- AlterEnum
+ALTER TYPE "EstadoComanda" ADD VALUE 'SIN_PAGAR';

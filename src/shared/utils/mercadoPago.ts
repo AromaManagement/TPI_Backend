@@ -6,7 +6,7 @@ import { type ComandaData } from '../../features/comandas/comanda.dto.js';
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN as string });
 
-export const CreateMPPreference = async (comanda: ComandaData) => {
+export const CreateMPPreference = async (comanda: ComandaData, callbackUrl: string) => {
   try {
 
     const { detalles } = comanda;
@@ -24,9 +24,9 @@ export const CreateMPPreference = async (comanda: ComandaData) => {
           currency_id: 'ARS',
         })),
         back_urls: {
-          success: 'localhost:3000/payment-success', 
-          failure: 'localhost:3000/payment-failure',
-          pending: 'localhost:3000/payment-pending'
+          success: `${callbackUrl}?status=success`, 
+          failure: `${callbackUrl}?status=failure`,
+          pending: `${callbackUrl}?status=pending`
         },
         auto_return: 'approved',
         notification_url: `${process.env.WEBHOOK_URL}/api/pago/mercadopago`

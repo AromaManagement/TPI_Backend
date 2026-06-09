@@ -19,6 +19,7 @@ enum Rol {
 }
 
 enum EstadoComanda {
+  SIN_PAGAR
   SIN_ASIGNAR
   EN_COCINA
   LISTO
@@ -49,6 +50,18 @@ enum UnidadMedida {
   PORCION
 }
 
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  CANCELADO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  MERCADOPAGO
+}
+
 // ----------------------------
 // LOCALIDAD
 // ----------------------------
@@ -77,8 +90,8 @@ model Direccion {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  usuarios           Usuario[]
-  comandas           Comanda[]
+  usuarios Usuario[]
+  comandas Comanda[]
 
   @@map("direccion")
 }
@@ -101,11 +114,10 @@ model Usuario {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  direccion         Direccion?      @relation(fields: [direccionId], references: [id])
-  ClienteComanda    Comanda[]       @relation("ClienteComanda")
+  direccion         Direccion?       @relation(fields: [direccionId], references: [id])
+  ClienteComanda    Comanda[]        @relation("ClienteComanda")
   DetalleComanda    DetalleComanda[]
-  RepartidorComanda Comanda[]       
-
+  RepartidorComanda Comanda[]
 
   @@map("usuario")
 }
@@ -266,10 +278,11 @@ model Comanda {
   direccionId    Int?           @map("direccion_id")
   repartidorId   Int?           @map("repartidor_id")
 
-  cliente           Usuario?          @relation(fields: [clienteId], references: [id], name: "ClienteComanda")
-  detalles          DetalleComanda[]
-  repartidor         Usuario?          @relation(fields: [repartidorId], references: [id])
-  direccion         Direccion?        @relation(fields: [direccionId], references: [id])
+  cliente    Usuario?         @relation(fields: [clienteId], references: [id], name: "ClienteComanda")
+  detalles   DetalleComanda[]
+  repartidor Usuario?         @relation(fields: [repartidorId], references: [id])
+  direccion  Direccion?       @relation(fields: [direccionId], references: [id])
+  pago       Pago?
 
   @@map("comanda")
 }
@@ -295,3 +308,21 @@ model DetalleComanda {
   @@map("detalle_comanda")
 }
 
+// ----------------------------
+// PAGO
+// ----------------------------
+model Pago {
+  id          Int       @id @default(autoincrement())
+  comandaId   Int       @unique @map("comanda_id")
+  monto       Decimal   @db.Decimal(10, 2)
+  metodoPago  String    @map("metodo_pago") @db.VarChar(50)
+  proveedorId String?   @map("proveedor_id") @db.VarChar(100)
+  estadoPago  String    @map("estado_pago") @db.VarChar(50)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  comanda Comanda @relation(fields: [comandaId], references: [id])
+
+  @@map("pago")
+}
