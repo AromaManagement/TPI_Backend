@@ -1,10 +1,11 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import {
     createCartaService,
     getAllCartaService,
     getCartaByIdService,
     updateCartaService,
     deleteCartaService,
+    getCartaDisponiblesService,
 } from './carta.services.js';
 import type { CreateCartaDtoType, UpdateCartaDtoType } from './carta.dto.js';
 
@@ -63,4 +64,25 @@ export const deleteCarta = async (req: Request, res: Response) => {
         status: 'success',
         message: 'Carta eliminada exitosamente.',
     });
+};
+
+/**
+ * Recupera la carta filtrando y mostrando únicamente los platos que tienen stock disponible para cocinar
+ */
+export const getCartaDisponibles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const cartaDisponible = await getCartaDisponiblesService();
+
+    res.status(200).json({
+      status: "success",
+      message: "Carta de platos disponibles para preparación recuperada con éxito.",
+      data: cartaDisponible,
+    });
+  } catch (error) {
+    next(error);
+  }
 }
