@@ -13,7 +13,7 @@ export const createPlatoService = async (data: CreatePlatoDto) => {
         precio,
         detalle,
         imagenId,
-        platoArticulos: {
+        articulos: {
           create: articulos.map((articulo) => ({
             articuloId: articulo.articuloId,
             cantidad: articulo.cantidad,
