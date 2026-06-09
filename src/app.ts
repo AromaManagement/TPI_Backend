@@ -9,6 +9,10 @@ import localidadRouter from "./features/localidades/localidad.routes.js";
 import direccionRouter from "./features/direcciones/direccion.routes.js";
 import imagenRouter from "./features/imagenes/imagen.routes.js";
 import comandaRouter from "./features/comandas/comandas.routes.js";
+import articuloRouter from "./features/articulo/articulo.routes.js";
+import stockRouter from "./features/stock/stock.routes.js";
+import movimientoStockRouter from "./features/movimientoStock/movimientoStock.routes.js";
+import platoRouter from "./features/plato/plato.routes.js";
 import { NotFoundError } from "./shared/errors/app-error.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 
@@ -27,6 +31,10 @@ app.use("/api/localidades", localidadRouter);
 app.use("/api/direcciones", direccionRouter);
 app.use("/api/imagenes", imagenRouter);
 app.use("/api/comandas", comandaRouter);
+app.use("/api/articulo", articuloRouter);
+app.use("/api/stock", stockRouter);
+app.use("/api/movimiento-stock", movimientoStockRouter);
+app.use("/api/platos", platoRouter);
 
 app.all(/.*/, (req, _res, next) => {
   next(
