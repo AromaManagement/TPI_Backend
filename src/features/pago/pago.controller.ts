@@ -1,6 +1,8 @@
 import { Payment } from 'mercadopago';
 import { type Request, type Response } from 'express';
 import { getPago } from '../../shared/utils/mercadoPago.js';
+import { getPagoByComandaIdService, updateEstadoPagoService } from './pago.service.js';
+import { updateComandaEstadoService } from '../comandas/comandas.services.js';
 
 
 export const handleMercadoPagoWebhook = async (req: Request, res: Response) => {
@@ -21,14 +23,33 @@ export const handleMercadoPagoWebhook = async (req: Request, res: Response) => {
 
       console.log(`Pago MP ${paymentId} -> Orden Interna: ${internalOrderId} | Estado: ${paymentStatus}`);
 
-      if (paymentStatus === 'approved') {
-        console.log('¡El pago fue aprobado exitosamente!');
-      } else {
+      if (paymentStatus !== 'approved') {
         console.log(`El pago no está aprobado. Estado actual: ${paymentStatus} (${statusDetail})`);
+        return;
+      } 
+
+      if (internalOrderId === undefined) {
+        console.error('No se encontró external_reference en el pago de Mercado Pago');
+        return;
       }
+
+      const comandaId = parseInt(internalOrderId.replace('comanda-', ''), 10);
+
+      const pago = await getPagoByComandaIdService(comandaId);
+      if (!pago) {
+        console.error('No se encontró el pago asociado a la comanda.');
+        return;
+      }
+
+      await updateEstadoPagoService(pago.id, 'APROBADO');
+
+      await updateComandaEstadoService(comandaId, 'SIN_ASIGNAR');
+
+      console.log(`Pago ${paymentId} aprobado y comanda ${comandaId} actualizada a SIN_ASIGNAR.`);
 
     } catch (error) {
       console.error('Error al consultar el pago en Mercado Pago:', error);
     }
   }
 };
+

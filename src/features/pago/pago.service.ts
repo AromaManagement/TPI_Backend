@@ -15,3 +15,28 @@ export const createPagoService = async (pagoData: PagoData) => {
     }
 };
 
+
+export const getPagoByComandaIdService = async (comandaId: number) => {
+    try {
+        const pago = await prisma.pago.findFirst({
+            where: { comandaId },
+        });
+        return pago;
+    } catch (error) {
+        console.error("Error al obtener pago por comandaId:", error);
+        throw new Error("Error al obtener pago por comandaId");
+    }
+};
+
+export const updateEstadoPagoService = async (pagoId: number, estadoPago: string) => {
+    try {
+        const updatedPago = await prisma.pago.update({
+            where: { id: pagoId },
+            data: { estadoPago },
+        });
+        return updatedPago;
+    } catch (error) {
+        console.error("Error al actualizar estado de pago:", error);
+        throw new Error("Error al actualizar estado de pago");
+    }
+};

@@ -22,7 +22,8 @@ const comandaSelect = {
   },
   detalles: true,
   direccion: true,
-  repartidor: true
+  repartidor: true,
+  pago: true,
 };
 
 export const createComandaService = async (data: CreateComandaDto) => {
