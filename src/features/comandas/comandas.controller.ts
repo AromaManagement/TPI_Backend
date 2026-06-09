@@ -185,27 +185,34 @@ export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res:
 
 export const completarDetalle = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const detalleId = Number(req.params.id);
+        const detalleComandaId = Number(req.params.id);
 
-        if (isNaN(detalleId)) {
+        if (isNaN(detalleComandaId)) {
             return res.status(400).json({
                 status: "error",
-                message: "ID de detalle inválido.",
+                message: "ID de detalle de comanda inválido.",
             });
         }
 
-        const detalle = await completarDetalleService(detalleId);
+        if (req.user?.rol !== "COCINERO") {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para completar un detalle de comanda.",
+            });
+        }
+
+        const updatedDetalle = await completarDetalleService(detalleComandaId);
 
         return res.status(200).json({
             status: "success",
-            message: "Detalle marcado como listo.",
-            data: detalle,
+            message: "Detalle de comanda completado exitosamente.",
+            data: updatedDetalle,
         });
 
     } catch (error) {
         return res.status(500).json({
             status: "error",
-            message: "Ocurrió un error al completar el detalle.",
+            message: "Ocurrió un error al completar el detalle de comanda.",
         });
     }
 };

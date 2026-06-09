@@ -180,35 +180,36 @@ export const assignChefToComandaDetalleService = async (detalleComandaId: number
   });
 };
 
-export const completarDetalleService = async (detalleId: number) => {
-  const detalle = await prisma.detalleComanda.findUnique({
-    where: { id: detalleId },
+export const completarDetalleService = async (detalleComandaId: number) => {
+  const detalleComanda = await prisma.detalleComanda.findUnique({
+    where: { id: detalleComandaId },
   });
 
-  if (!detalle) {
-    throw new NotFoundError(`El detalle de comanda con ID ${detalleId} no existe.`);
+  if (!detalleComanda) {
+    throw new NotFoundError(`El detalle de comanda con ID ${detalleComandaId} no existe.`);
   }
 
-  await prisma.detalleComanda.update({
-    where: { id: detalleId },
+  const updatedDetalle = await prisma.detalleComanda.update({
+    where: { id: detalleComandaId },
     data: { estadoDetalle: EstadoDetalle.LISTO },
+    select: detalleSelect,
   });
 
-  // Si todos los detalles activos de la comanda están LISTO, la comanda pasa a LISTO
-  const pendientes = await prisma.detalleComanda.count({
+  // Si todos los detalles de la comanda están LISTO, pasar la comanda a LISTO
+  const detallesPendientes = await prisma.detalleComanda.count({
     where: {
-      comandaId: detalle.comandaId,
-      deletedAt: null,
+      comandaId: detalleComanda.comandaId,
       estadoDetalle: { not: EstadoDetalle.LISTO },
+      deletedAt: null,
     },
   });
 
-  if (pendientes === 0) {
-    await updateComandaEstadoService(detalle.comandaId, EstadoComanda.LISTO);
+  if (detallesPendientes === 0) {
+    await prisma.comanda.update({
+      where: { id: detalleComanda.comandaId },
+      data: { estadoComanda: EstadoComanda.LISTO },
+    });
   }
 
-  return prisma.detalleComanda.findUnique({
-    where: { id: detalleId },
-    select: detalleSelect,
-  });
+  return updatedDetalle;
 };
