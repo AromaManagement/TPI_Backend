@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from 'express';
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import { type ComandaData } from '../../features/comandas/comanda.dto.js';
 
 
@@ -15,6 +15,7 @@ export const CreateMPPreference = async (comanda: ComandaData) => {
     
     const result = await preference.create({
       body: {
+        external_reference: `comanda-${comanda.id}`,
         items: detalles.map(detalle => ({
           id: `item-ID-${detalle.platoId}`,
           title: `${detalle.platoNombre}`,
@@ -23,24 +24,36 @@ export const CreateMPPreference = async (comanda: ComandaData) => {
           currency_id: 'ARS',
         })),
         back_urls: {
-          success: 'localhost:3000/payment-success', // Deep links para volver a tu app
+          success: 'localhost:3000/payment-success', 
           failure: 'localhost:3000/payment-failure',
           pending: 'localhost:3000/payment-pending'
         },
         auto_return: 'approved',
-        notification_url: 'https://tu-dominio-backend.com/webhook/mercadopago'
+        notification_url: `${process.env.WEBHOOK_URL}/api/pago/mercadopago`
       }
     });
 
-    // 3. Devolverle al front el init_point (URL de pago) o el ID
     return {
       id: result.id,
-      init_point: result.init_point, // URL para producción
-      sandbox_init_point: result.sandbox_init_point // URL para testing
+      init_point: result.init_point, 
+      sandbox_init_point: result.sandbox_init_point 
     };
 
   } catch (error) {
     console.error('Error creando preferencia de MercadoPago:', error);
     throw new Error('No se pudo crear la preferencia de pago');
+  }
+};
+
+
+export const getPago = async (id: string) => {
+  try {
+    const payment = new Payment(client);
+    const paymentDetails = await payment.get({ id });
+
+    return paymentDetails;
+  } catch (error) {
+    console.error('Error obteniendo el pago de MercadoPago:', error);
+    throw new Error('No se pudo obtener el pago');
   }
 };
