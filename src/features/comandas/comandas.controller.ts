@@ -11,9 +11,9 @@ import {
     completarDetalleService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
-import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
+import { CreateComandaSchema, type ComandaData, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
-import { isArray } from "node:util";
+import { CreateMPPreference } from "../../shared/utils/mercadoPago.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
     console.log("Intentando crear comanda con datos:", req.body);
@@ -44,6 +44,26 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
         };
 
         const newComanda = await createComandaService(comandaData);
+
+        console.log("Comanda creada exitosamente:", newComanda);
+        
+        // Crear preferencia de pago en MercadoPago
+        const comandaMp = {
+            id: newComanda.id,
+            detalles:  newComanda.detalles.map(detalle => ({
+                platoId: detalle.platoId,
+                platoNombre: 'Plato ' + detalle.platoId,
+                cantidad: 1,
+                precioUnitario: detalle.precioUnitario
+            }))
+        } as ComandaData;
+
+        console.log("Creando preferencia de MercadoPago para la comanda:", comandaMp);
+
+        const mpPreference = await CreateMPPreference(comandaMp);
+
+        console.log("Preferencia de MercadoPago creada:", mpPreference);
+
 
         return res.status(201).json({
             status: "success",
