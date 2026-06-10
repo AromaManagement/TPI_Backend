@@ -30,7 +30,8 @@ export const RegisterSchema = z.object({
   apellido: z
     .string({ message: "El apellido es requerido" })
     .max(100, "El apellido no puede tener más de 100 caracteres"),
-  rol: RolEnum.optional(),
+  telefono: z.string().max(20).optional(),
+  rol: z.enum(["CLIENTE", "REPARTIDOR"]).optional(),
 });
 
 export type RegisterDto = z.infer<typeof RegisterSchema>;

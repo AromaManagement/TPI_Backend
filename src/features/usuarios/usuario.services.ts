@@ -10,6 +10,7 @@ const userSelect = {
   apellido: true,
   tipoDocumento: true,
   documento: true,
+  telefono: true,
   nacimiento: true,
   direccionId: true,
   rol: true,

@@ -107,6 +107,7 @@ model Usuario {
   apellido      String    @db.VarChar(100)
   tipoDocumento String?   @map("tipo_documento") @db.VarChar(50)
   documento     String?   @db.VarChar(50)
+  telefono      String?   @db.VarChar(20)
   nacimiento    DateTime? @db.Date
   direccionId   Int?      @map("direccion_id")
   rol           Rol       @map("rol")

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // Ajustá estos valores según lo que tengas definido en el enum EstadoComanda de tu schema.prisma
 const EstadoComandaEnum = z.enum([
+  "SIN_PAGAR",
   "SIN_ASIGNAR",
   "EN_COCINA",
   "LISTO",

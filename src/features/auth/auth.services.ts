@@ -53,7 +53,8 @@ export const registerService = async (data: RegisterDto) => {
       contrasena: hashedPassword,
       nombre: data.nombre,
       apellido: data.apellido,
-      rol: "CLIENTE",
+      telefono: data.telefono,
+      rol: data.rol ?? "CLIENTE",
     },
   });
 

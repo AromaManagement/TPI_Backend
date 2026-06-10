@@ -24,12 +24,13 @@ async function main() {
   const correoRepartidor = "repartidor@aromas.com";
   await prisma.usuario.upsert({
     where: { correo: correoRepartidor },
-    update: {},
+    update: { telefono: "2614001122" },
     create: {
       correo: correoRepartidor,
       contrasena: await bcrypt.hash("12345678", 10),
       nombre: "Carlos",
       apellido: "Gómez",
+      telefono: "2614001122",
       rol: "REPARTIDOR",
     },
   });
@@ -51,12 +52,13 @@ async function main() {
 
   const cliente = await prisma.usuario.upsert({
     where: { correo: correoCliente },
-    update: {},
+    update: { telefono: "2614009988" },
     create: {
       correo: correoCliente,
       contrasena: await bcrypt.hash("12345678", 10),
       nombre: "Juan",
       apellido: "Pérez",
+      telefono: "2614009988",
       rol: "CLIENTE",
       direccionId: direccion.id,
     },
