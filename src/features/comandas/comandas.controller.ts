@@ -9,15 +9,18 @@ import {
     updateComandaEstadoService,
     assignChefToComandaDetalleService,
     completarDetalleService,
+    cancelarComandaService,
     desasignarDetalleService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
-import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
+import { CreateComandaSchema, type ComandaData, type CreateComandaDto } from "./comanda.dto.js";
 import { getUserByIdService } from "../usuarios/usuario.services.js";
-import { isArray } from "node:util";
+import { CreateMPPreference } from "../../shared/utils/mercadoPago.js";
+import type { EstadoComanda, EstadoPago, MetodoPago } from "@prisma/client";
+import { createPagoService } from "../pago/pago.service.js";
+import type { PagoData } from "../pago/pago.dto.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
-    console.log("Intentando crear comanda con datos:", req.body);
     try {
         if (req.user?.rol !== "CLIENTE") {
             return res.status(403).json({
@@ -35,21 +38,69 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
             });
         }
 
-        const bodyValidado = CreateComandaSchema.parse(req.body);
+        
+
+        const metodoPago = req.body.metodoPago;
+        const comanda = CreateComandaSchema.parse(req.body);
+        const estadoComanda = metodoPago === "EFECTIVO" ? "SIN_ASIGNAR" as EstadoComanda : "SIN_PAGAR" as EstadoComanda;
 
         const comandaData = {
-            ...bodyValidado,
+            ...comanda,
             clienteId: req.user.id,
-            estadoComanda: "SIN_ASIGNAR" as const,
+            estadoComanda,
             direccionId: cliente.direccionId,
         };
 
         const newComanda = await createComandaService(comandaData);
 
+        // Crear pago
+        const callbackUrl = req.body.callbackUrl;
+        let pago = null as PagoData | null;
+
+        if (metodoPago === "EFECTIVO") {
+            pago = {
+                comandaId: newComanda.id,
+                monto: 0,
+                metodoPago: "EFECTIVO" as MetodoPago,
+                estadoPago: "ACEPTADO" as EstadoPago,
+            }
+
+        } else if (metodoPago === "MERCADOPAGO") {
+           // Crear preferencia de pago en MercadoPago
+            const comandaMp = {
+                id: newComanda.id,
+                detalles:  newComanda.detalles.map(detalle => ({
+                    platoId: detalle.platoId,
+                    platoNombre: 'Plato ' + detalle.platoId,
+                    cantidad: 1,
+                    precioUnitario: detalle.precioUnitario
+                }))
+            } as ComandaData;
+
+            const mpPreference = await CreateMPPreference(comandaMp, callbackUrl);
+
+            pago = {
+                comandaId: newComanda.id,
+                monto: comandaMp.detalles.reduce((total, detalle) => total + (detalle.cantidad * Number(detalle.precioUnitario)), 0),
+                metodoPago: "MERCADOPAGO" as MetodoPago,
+                estadoPago: "PENDIENTE" as EstadoPago,
+                proveedorId: mpPreference.id,
+                urlPago: mpPreference.init_point
+            }
+
+        } else {
+            return res.status(400).json({
+                status: "error",
+                message: "Método de pago no soportado.",
+            });
+        }
+        
+        await createPagoService(pago);
+
         return res.status(201).json({
             status: "success",
             message: "Comanda creada exitosamente.",
-            data: newComanda,
+            data: {...newComanda, pago},
         });
 
     } catch (error) {
@@ -73,6 +124,7 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
         }
 
         const activeComandas = await getActiveComandasByClienteIdService(clienteId);
+
 
         return res.status(200).json({
             status: "success",
@@ -230,6 +282,48 @@ export const updateComandaEstado = async (req: Request, res: Response) => {
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al actualizar el estado de la comanda.",
+        });
+    }
+};
+
+export const cancelarComanda = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const comandaId = Number(req.params.id);
+        
+        if (isNaN(comandaId)) {
+            return res.status(400).json({
+                status: "error",
+                message: "ID de comanda inválido.",
+            });
+        }
+
+        const comanda = await getComandaByIdService(comandaId);
+        if (!comanda) {
+            return res.status(404).json({
+                status: "error",
+                message: "Comanda no encontrada.",
+            });
+        }
+
+        if (comanda.clienteId !== req.user?.id) {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para cancelar esta comanda.",
+            });
+        }
+
+        const cancelledComanda = await cancelarComandaService(comandaId);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Comanda cancelada exitosamente.",
+            data: cancelledComanda,
+        });
+        
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al cancelar la comanda.",
         });
     }
 };

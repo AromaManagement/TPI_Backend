@@ -8,6 +8,7 @@ import {
   completarDetalle,
   desasignarDetalle,
   updateComandaEstado,
+  cancelarComanda,
 } from "./comandas.controller.js";
 
 import { authenticateJWT, requireRole } from "../../shared/middlewares/auth.middleware.js";
@@ -24,5 +25,6 @@ router.post("/assign-chef", requireRole("COCINERO", "ADMIN"), assignChefToComand
 router.patch("/detalles/:id/completar", requireRole("COCINERO", "ADMIN"), completarDetalle);
 router.patch("/detalles/:id/desasignar", requireRole("COCINERO", "ADMIN"), desasignarDetalle);
 router.patch("/:id/estado", requireRole("ADMIN", "COCINERO", "REPARTIDOR"), updateComandaEstado);
+router.post("/:id/cancelar", requireRole("CLIENTE"), cancelarComanda);
 
 export default router;

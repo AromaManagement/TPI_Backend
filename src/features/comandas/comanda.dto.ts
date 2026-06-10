@@ -1,3 +1,4 @@
+import type { Decimal } from "@prisma/client/runtime/library";
 import { dir } from "node:console";
 import { z } from "zod";
 
@@ -62,3 +63,14 @@ export const ComandaParamsSchema = z.object({
 });
 
 export type ComandaParamsDto = z.infer<typeof ComandaParamsSchema>;
+
+export type ComandaData = {
+  id: number;
+
+  detalles: {
+    platoId: number;
+    platoNombre: string;
+    cantidad: number;
+    precioUnitario?: Decimal;
+  }[];
+};

@@ -15,6 +15,7 @@ import movimientoStockRouter from "./features/movimientoStock/movimientoStock.ro
 import platoRouter from "./features/plato/plato.routes.js";
 import seccionRouter from "./features/secciones/secciones.router.js";
 import cartaRouter from "./features/carta/carta.routes.js";
+import pagoRouter from "./features/pago/pago.route.js";
 import { NotFoundError } from "./shared/errors/app-error.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 
@@ -39,6 +40,7 @@ app.use("/api/movimiento-stock", movimientoStockRouter);
 app.use("/api/platos", platoRouter);
 app.use("/api/secciones", seccionRouter);
 app.use("/api/carta", cartaRouter);
+app.use("/api/pago", pagoRouter);
 
 app.all(/.*/, (req, _res, next) => {
   next(

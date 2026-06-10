@@ -58,12 +58,11 @@ const comandaSelect = {
       nombre: true,
       apellido: true,
     },
-  }
+  },
+  pago: true,
 };
 
 export const createComandaService = async (data: CreateComandaDto) => {
-
-  console.log("Data recibida para crear comanda:", data);
   if (data.clienteId) {
     const cliente = await prisma.usuario.findUnique({
       where: { id: data.clienteId, deletedAt: null },
@@ -291,3 +290,19 @@ export const completarDetalleService = async (detalleComandaId: number) => {
 
   return updatedDetalle;
 };
+
+export const cancelarComandaService = async (comandaId: number) => {
+  const comanda = await prisma.comanda.findUnique({
+    where: { id: comandaId, deletedAt: null },
+  });
+  
+  if (!comanda) {
+    throw new NotFoundError(`La comanda con ID ${comandaId} no existe.`);
+  }
+
+  return prisma.comanda.update({
+    where: { id: comandaId },
+    data: { estadoComanda: EstadoComanda.CANCELADO },
+    select: comandaSelect,
+  });
+}
