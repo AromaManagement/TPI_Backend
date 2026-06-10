@@ -35,6 +35,14 @@ export const createUserService = async (data: CreateUserDto) => {
   });
 };
 
+export const getUsersByRolService = async (rol: string) => {
+  return prisma.usuario.findMany({
+    where: { deletedAt: null, rol: rol as any },
+    select: { id: true, nombre: true, apellido: true, rol: true },
+    orderBy: { nombre: "asc" },
+  });
+};
+
 export const getAllUsersService = async () => {
   return prisma.usuario.findMany({
     where: { deletedAt: null },

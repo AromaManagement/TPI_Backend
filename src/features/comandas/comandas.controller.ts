@@ -9,6 +9,7 @@ import {
     updateComandaEstadoService,
     assignChefToComandaDetalleService,
     completarDetalleService,
+    desasignarDetalleService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type CreateComandaDto } from "./comanda.dto.js";
@@ -151,19 +152,15 @@ export const assignRepartidorToComanda = async (req: AuthenticatedRequest, res: 
 export const assignChefToComandaDetalle = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const comandaDetalleId = Number(req.body.detalleComandaId);
-        const chefId = req.user?.id;
+        // ADMIN puede especificar chefId en el body; COCINERO siempre se asigna a sí mismo
+        const chefId = req.user?.rol === "ADMIN" && req.body.chefId
+            ? Number(req.body.chefId)
+            : req.user?.id;
 
         if (isNaN(comandaDetalleId) || !chefId) {
             return res.status(400).json({
                 status: "error",
                 message: "IDs de comanda detalle o chef inválidos.",
-            });
-        }
-
-        if (req.user?.rol !== "COCINERO") {
-            return res.status(403).json({
-                status: "error",
-                message: "No tienes permisos para asignarte a un detalle de comanda.",
             });
         }
 
@@ -191,13 +188,6 @@ export const completarDetalle = async (req: AuthenticatedRequest, res: Response)
             return res.status(400).json({
                 status: "error",
                 message: "ID de detalle de comanda inválido.",
-            });
-        }
-
-        if (req.user?.rol !== "COCINERO") {
-            return res.status(403).json({
-                status: "error",
-                message: "No tienes permisos para completar un detalle de comanda.",
             });
         }
 
@@ -240,6 +230,26 @@ export const updateComandaEstado = async (req: Request, res: Response) => {
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al actualizar el estado de la comanda.",
+        });
+    }
+};
+
+export const desasignarDetalle = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const detalleComandaId = Number(req.params.id);
+        if (isNaN(detalleComandaId)) {
+            return res.status(400).json({ status: "error", message: "ID de detalle inválido." });
+        }
+        const updatedDetalle = await desasignarDetalleService(detalleComandaId);
+        return res.status(200).json({
+            status: "success",
+            message: "Detalle desasignado exitosamente.",
+            data: updatedDetalle,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al desasignar el detalle.",
         });
     }
 };

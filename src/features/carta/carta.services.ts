@@ -118,9 +118,9 @@ export const getCartaDisponiblesService = async () => {
   const resultadoFiltrado = seccionesDeLaCarta.map(seccion => {
     const platosConStock = seccion.platos.filter(plato => {
       
-      // Si el plato no tiene ingredientes definidos, no se puede calcular stock
+      // Si el plato no tiene ingredientes definidos, se muestra disponible
       if (!plato.articulos || plato.articulos.length === 0) {
-        return false;
+        return true;
       }
 
       // El plato está disponible si TODOS sus ingredientes cubren la receta
