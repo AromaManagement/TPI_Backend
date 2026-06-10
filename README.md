@@ -76,3 +76,18 @@ En el archivo [package.json](package.json) se encuentran definidos los siguiente
 | `npm run start` | Ejecuta el servidor utilizando el código ya compilado desde la carpeta `dist`. |
 | `npm run migrate` | Ejecuta las migraciones pendientes en desarrollo mediante Prisma (`npx prisma migrate dev`). |
 | `npm run seed` | Ejecuta el script de seeding para poblar la base de datos con datos de prueba (si existe). |
+
+
+## Configuración para MP
+
+
+1. **Obtener Credenciales:** Se debe acceder al sitio web de [Mercado Pago Developers](https://developers.mercadopago.com/) y obtener el Access Token de producción (Integraciones > Aplicación > Producción). Setearlo en el archivo `.env`:
+```env
+MP_ACCESS_TOKEN=APP_USR-xxxxxx-xxxxx
+```
+
+2. **Configurar Webhook Local (Desarrollo):** Mercado Pago requiere una URL pública con HTTPS para enviar las notificaciones de pago. Para desarrollo local, se debe utilizar una herramienta de túnel reverso (recomendado `ngrok`) para exponer el puerto del backend a internet.
+Una vez levantado el túnel, setear la URL pública generada en el .env:
+```
+WEBHOOK_URL='https://oil-steadily-cargo.ngrok-free.dev'
+```
