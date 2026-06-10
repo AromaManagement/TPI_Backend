@@ -318,6 +318,7 @@ model Pago {
   metodoPago  String    @map("metodo_pago") @db.VarChar(50)
   proveedorId String?   @map("proveedor_id") @db.VarChar(100)
   estadoPago  String    @map("estado_pago") @db.VarChar(50)
+  urlPago     String?   @map("url_pago") @db.VarChar(500)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")

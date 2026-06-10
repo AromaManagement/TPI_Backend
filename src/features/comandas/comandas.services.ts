@@ -27,8 +27,6 @@ const comandaSelect = {
 };
 
 export const createComandaService = async (data: CreateComandaDto) => {
-
-  console.log("Data recibida para crear comanda:", data);
   if (data.clienteId) {
     const cliente = await prisma.usuario.findUnique({
       where: { id: data.clienteId, deletedAt: null },

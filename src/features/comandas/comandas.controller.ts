@@ -16,6 +16,7 @@ import { getUserByIdService } from "../usuarios/usuario.services.js";
 import { CreateMPPreference } from "../../shared/utils/mercadoPago.js";
 import type { EstadoComanda, EstadoPago, MetodoPago } from "@prisma/client";
 import { createPagoService } from "../pago/pago.service.js";
+import type { PagoData } from "../pago/pago.dto.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
     console.log("Intentando crear comanda con datos:", req.body);
@@ -53,17 +54,16 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
 
         // Crear pago
         const callbackUrl = req.body.callbackUrl;
-        let urlPago = null;
+        let pago = null as PagoData | null;
 
         if (metodoPago === "EFECTIVO") {
-            const pago = {
+            pago = {
                 comandaId: newComanda.id,
                 monto: 0,
                 metodoPago: "EFECTIVO" as MetodoPago,
                 estadoPago: "PENDIENTE" as EstadoPago,
             }
 
-            await createPagoService(pago);
         } else if (metodoPago === "MERCADOPAGO") {
            // Crear preferencia de pago en MercadoPago
             const comandaMp = {
@@ -77,29 +77,29 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
             } as ComandaData;
 
             const mpPreference = await CreateMPPreference(comandaMp, callbackUrl);
-            urlPago = mpPreference.init_point;
 
-            const pago = {
+            pago = {
                 comandaId: newComanda.id,
                 monto: comandaMp.detalles.reduce((total, detalle) => total + (detalle.cantidad * Number(detalle.precioUnitario)), 0),
                 metodoPago: "MERCADOPAGO" as MetodoPago,
                 estadoPago: "PENDIENTE" as EstadoPago,
-                provedorId: mpPreference.id
+                proveedorId: mpPreference.id,
+                urlPago: mpPreference.init_point
             }
 
-            await createPagoService(pago);
         } else {
             return res.status(400).json({
                 status: "error",
                 message: "Método de pago no soportado.",
             });
         }
-
+        
+        await createPagoService(pago);
 
         return res.status(201).json({
             status: "success",
             message: "Comanda creada exitosamente.",
-            data: {...newComanda, urlPago},
+            data: {...newComanda, pago},
         });
 
     } catch (error) {
@@ -123,6 +123,8 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
         }
 
         const activeComandas = await getActiveComandasByClienteIdService(clienteId);
+
+        console.log(`Comandas activas para cliente ${clienteId}:`, activeComandas);
 
         return res.status(200).json({
             status: "success",

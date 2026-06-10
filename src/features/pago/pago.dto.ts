@@ -5,5 +5,6 @@ export type PagoData = {
     metodoPago: string;
     monto: number;
     estadoPago: EstadoPago;
-    provedorId?: string; // ID del pago en el proveedor (ej. MercadoPago)
+    urlPago?: string | null;
+    proveedorId?: string | null;
 }
