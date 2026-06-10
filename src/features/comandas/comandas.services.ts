@@ -104,7 +104,7 @@ export const getActiveComandasByClienteIdService = async (clienteId: number) => 
       clienteId,
       deletedAt: null,
       estadoComanda: {
-        not: "ENTREGADO",
+        notIn: ["ENTREGADO", "CANCELADO"],
       },
     },
     select: comandaSelect,
@@ -212,3 +212,19 @@ export const completarDetalleService = async (detalleComandaId: number) => {
 
   return updatedDetalle;
 };
+
+export const cancelarComandaService = async (comandaId: number) => {
+  const comanda = await prisma.comanda.findUnique({
+    where: { id: comandaId, deletedAt: null },
+  });
+  
+  if (!comanda) {
+    throw new NotFoundError(`La comanda con ID ${comandaId} no existe.`);
+  }
+
+  return prisma.comanda.update({
+    where: { id: comandaId },
+    data: { estadoComanda: EstadoComanda.CANCELADO },
+    select: comandaSelect,
+  });
+}

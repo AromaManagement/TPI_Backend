@@ -9,6 +9,7 @@ import {
     updateComandaEstadoService,
     assignChefToComandaDetalleService,
     completarDetalleService,
+    cancelarComandaService,
 } from "./comandas.services.js";
 import type { AuthenticatedRequest } from "../../shared/types/auth.types.js";
 import { CreateComandaSchema, type ComandaData, type CreateComandaDto } from "./comanda.dto.js";
@@ -19,7 +20,6 @@ import { createPagoService } from "../pago/pago.service.js";
 import type { PagoData } from "../pago/pago.dto.js";
 
 export const createComanda = async (req: AuthenticatedRequest, res: Response) => {
-    console.log("Intentando crear comanda con datos:", req.body);
     try {
         if (req.user?.rol !== "CLIENTE") {
             return res.status(403).json({
@@ -61,7 +61,7 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
                 comandaId: newComanda.id,
                 monto: 0,
                 metodoPago: "EFECTIVO" as MetodoPago,
-                estadoPago: "PENDIENTE" as EstadoPago,
+                estadoPago: "ACEPTADO" as EstadoPago,
             }
 
         } else if (metodoPago === "MERCADOPAGO") {
@@ -124,7 +124,6 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
 
         const activeComandas = await getActiveComandasByClienteIdService(clienteId);
 
-        console.log(`Comandas activas para cliente ${clienteId}:`, activeComandas);
 
         return res.status(200).json({
             status: "success",
@@ -293,6 +292,48 @@ export const updateComandaEstado = async (req: Request, res: Response) => {
         return res.status(500).json({
             status: "error",
             message: "Ocurrió un error al actualizar el estado de la comanda.",
+        });
+    }
+};
+
+export const cancelarComanda = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const comandaId = Number(req.params.id);
+        
+        if (isNaN(comandaId)) {
+            return res.status(400).json({
+                status: "error",
+                message: "ID de comanda inválido.",
+            });
+        }
+
+        const comanda = await getComandaByIdService(comandaId);
+        if (!comanda) {
+            return res.status(404).json({
+                status: "error",
+                message: "Comanda no encontrada.",
+            });
+        }
+
+        if (comanda.clienteId !== req.user?.id) {
+            return res.status(403).json({
+                status: "error",
+                message: "No tienes permisos para cancelar esta comanda.",
+            });
+        }
+
+        const cancelledComanda = await cancelarComandaService(comandaId);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Comanda cancelada exitosamente.",
+            data: cancelledComanda,
+        });
+        
+    } catch (error) {
+        return res.status(500).json({
+            status: "error",
+            message: "Ocurrió un error al cancelar la comanda.",
         });
     }
 };

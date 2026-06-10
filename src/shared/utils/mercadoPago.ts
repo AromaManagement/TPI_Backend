@@ -23,12 +23,6 @@ export const CreateMPPreference = async (comanda: ComandaData, callbackUrl: stri
           unit_price: Number(detalle.precioUnitario),
           currency_id: 'ARS',
         })),
-        back_urls: {
-          success: `${callbackUrl}?status=success`, 
-          failure: `${callbackUrl}?status=failure`,
-          pending: `${callbackUrl}?status=pending`
-        },
-        auto_return: 'approved',
         notification_url: `${process.env.WEBHOOK_URL}/api/pago/mercadopago`
       }
     });
