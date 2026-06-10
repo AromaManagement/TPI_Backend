@@ -105,7 +105,7 @@ export const getActiveComandasByClienteIdService = async (clienteId: number) => 
       clienteId,
       deletedAt: null,
       estadoComanda: {
-        not: "ENTREGADO",
+        notIn: ["ENTREGADO", "CANCELADO"],
       },
     },
     select: comandaSelect,
