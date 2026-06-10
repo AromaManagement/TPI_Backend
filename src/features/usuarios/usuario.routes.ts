@@ -5,6 +5,8 @@ import {
   getUserById,
   updateUser,
   deleteUser,
+  getMe,
+  updateMe,
 } from "./usuario.controller.js";
 import {
   validateBody,
@@ -20,6 +22,9 @@ import {
 const router = Router();
 
 router.use(authenticateJWT);
+
+router.get("/me", getMe);
+router.put("/me", validateBody(UpdateUserSchema), updateMe);
 
 router.post("/", requireRole("ADMIN"), validateBody(CreateUserSchema), createUser);
 router.get("/", requireRole("ADMIN"), getAllUsers);

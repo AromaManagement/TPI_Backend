@@ -1,4 +1,5 @@
 import type { Response, Request } from "express";
+import type { AuthenticatedRequest } from "../../shared/types/index.js";
 import {
   getAllUsersService,
   getUserByIdService,
@@ -61,4 +62,17 @@ export const deleteUser = async (req: Request, res: Response) => {
     message: "Usuario eliminado exitosamente.",
     data: deletedUser,
   });
+};
+
+export const getMe = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.id;
+  const user = await getUserByIdService(userId);
+  res.status(200).json({ status: "success", message: "Perfil obtenido.", data: user });
+};
+
+export const updateMe = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!.id;
+  const data = req.body;
+  const updatedUser = await updateUserService(userId, data);
+  res.status(200).json({ status: "success", message: "Perfil actualizado.", data: updatedUser });
 };
