@@ -6,6 +6,7 @@ import {
   assignRepartidorToComanda,
   assignChefToComandaDetalle,
   completarDetalle,
+  desasignarDetalle,
   updateComandaEstado,
   cancelarComanda,
 } from "./comandas.controller.js";
@@ -20,8 +21,9 @@ router.post("/", requireRole("CLIENTE"), createComanda);
 router.get("/active", requireRole("CLIENTE"), getActiveComandaByClienteId);
 router.get("/estado/:estado", requireRole("ADMIN", "COCINERO", "REPARTIDOR"), getCommandasByEstado);
 router.post("/assign-repartidor", requireRole("REPARTIDOR"), assignRepartidorToComanda);
-router.post("/assign-chef", requireRole("COCINERO"), assignChefToComandaDetalle);
-router.patch("/detalles/:id/completar", requireRole("COCINERO"), completarDetalle);
+router.post("/assign-chef", requireRole("COCINERO", "ADMIN"), assignChefToComandaDetalle);
+router.patch("/detalles/:id/completar", requireRole("COCINERO", "ADMIN"), completarDetalle);
+router.patch("/detalles/:id/desasignar", requireRole("COCINERO", "ADMIN"), desasignarDetalle);
 router.patch("/:id/estado", requireRole("ADMIN", "COCINERO", "REPARTIDOR"), updateComandaEstado);
 router.post("/:id/cancelar", requireRole("CLIENTE"), cancelarComanda);
 

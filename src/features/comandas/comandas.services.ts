@@ -20,9 +20,45 @@ const comandaSelect = {
       apellido: true,
     },
   },
-  detalles: true,
-  direccion: true,
-  repartidor: true,
+  detalles: {
+    select: {
+      id: true,
+      platoId: true,
+      precioUnitario: true,
+      estadoDetalle: true,
+      empleadoId: true,
+      plato: {
+        select: {
+          id: true,
+          nombre: true,
+          precio: true,
+        },
+      },
+      empleado: {
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+        },
+      },
+    },
+  },
+  direccion: {
+    select: {
+      id: true,
+      calle: true,
+      numeracion: true,
+      barrio: true,
+      referencia: true,
+    },
+  },
+  repartidor: {
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+    },
+  },
   pago: true,
 };
 
@@ -172,11 +208,53 @@ export const assignChefToComandaDetalleService = async (detalleComandaId: number
     throw new NotFoundError(`El detalle de comanda con ID ${detalleComandaId} no existe.`);
   }
 
-  return prisma.detalleComanda.update({
+  const updatedDetalle = await prisma.detalleComanda.update({
     where: { id: detalleComandaId },
     data: { empleadoId: chefId, estadoDetalle: EstadoDetalle.EN_COCINA },
     select: detalleSelect,
   });
+
+  // Auto-transición: si la comanda estaba SIN_ASIGNAR, pasarla a EN_COCINA
+  await prisma.comanda.updateMany({
+    where: { id: detalleComanda.comandaId, estadoComanda: EstadoComanda.SIN_ASIGNAR },
+    data: { estadoComanda: EstadoComanda.EN_COCINA },
+  });
+
+  return updatedDetalle;
+};
+
+export const desasignarDetalleService = async (detalleComandaId: number) => {
+  const detalleComanda = await prisma.detalleComanda.findUnique({
+    where: { id: detalleComandaId },
+  });
+
+  if (!detalleComanda) {
+    throw new NotFoundError(`El detalle de comanda con ID ${detalleComandaId} no existe.`);
+  }
+
+  const updatedDetalle = await prisma.detalleComanda.update({
+    where: { id: detalleComandaId },
+    data: { empleadoId: null, estadoDetalle: EstadoDetalle.SIN_ASIGNAR },
+    select: detalleSelect,
+  });
+
+  // Si todos los detalles volvieron a SIN_ASIGNAR, revertir la comanda también
+  const detallesActivos = await prisma.detalleComanda.count({
+    where: {
+      comandaId: detalleComanda.comandaId,
+      estadoDetalle: { not: EstadoDetalle.SIN_ASIGNAR },
+      deletedAt: null,
+    },
+  });
+
+  if (detallesActivos === 0) {
+    await prisma.comanda.updateMany({
+      where: { id: detalleComanda.comandaId },
+      data: { estadoComanda: EstadoComanda.SIN_ASIGNAR },
+    });
+  }
+
+  return updatedDetalle;
 };
 
 export const completarDetalleService = async (detalleComandaId: number) => {
