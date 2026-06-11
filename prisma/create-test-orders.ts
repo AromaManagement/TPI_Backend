@@ -14,36 +14,43 @@ async function main() {
 
   const platos = await prisma.platos.findMany({
     where: { deletedAt: null },
-    take: 3,
+    orderBy: { id: "asc" },
   });
 
-  const pedidos = [
-    { descripcion: "Pedido 1 — Milanesa con papas" },
-    { descripcion: "Pedido 2 — Pizza Napolitana" },
-    { descripcion: "Pedido 3 — Empanadas x6" },
+  if (platos.length === 0) {
+    console.error("No hay platos en la DB. Corré el seed primero.");
+    process.exit(1);
+  }
+
+  // Tres pedidos con combinaciones distintas de platos
+  const combos = [
+    { desc: "Pedido 1 — Entrada + Plato Principal", indices: [0, 3] },
+    { desc: "Pedido 2 — Plato Principal + Bebida",  indices: [4, 6] },
+    { desc: "Pedido 3 — Variado",                   indices: [1, 5, 7] },
   ];
 
-  for (const p of pedidos) {
-    const detalles =
-      platos.length > 0
-        ? {
-            create: platos.slice(0, 1).map((plato) => ({
-              platoId: plato.id,
-              precioUnitario: plato.precio,
-            })),
-          }
-        : undefined;
+  for (const combo of combos) {
+    const items = combo.indices
+      .map((i) => platos[i])
+      .filter(Boolean);
 
     const comanda = await prisma.comanda.create({
       data: {
         clienteId: cliente.id,
         estadoComanda: "LISTO",
         direccionId: cliente.direccionId!,
-        ...(detalles && { detalles }),
+        detalles: {
+          create: items.map((p) => ({
+            platoId: p.id,
+            precioUnitario: p.precio,
+          })),
+        },
       },
+      include: { detalles: { include: { plato: true } } },
     });
 
-    console.log(`✓ ${p.descripcion} — Comanda #${comanda.id} creada`);
+    const nombres = comanda.detalles.map((d) => d.plato?.nombre ?? `#${d.platoId}`);
+    console.log(`✓ ${combo.desc} — Comanda #${comanda.id}: ${nombres.join(", ")}`);
   }
 }
 

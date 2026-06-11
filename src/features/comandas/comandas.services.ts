@@ -7,6 +7,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 const comandaSelect = {
   id: true,
   clienteId: true,
+  repartidorId: true,
   estadoComanda: true,
   fechaSolicitud: true,
   fechaEntrega: true,
