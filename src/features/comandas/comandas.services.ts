@@ -75,42 +75,111 @@ export const createComandaService = async (data: CreateComandaDto) => {
     }
   }
 
- 
-
- 
+  // 1. Estructurar los detalles de la comanda y recopilar los descuentos de stock necesarios
   let detallesData = [];
+  
+  // Usaremos un mapa o array temporal para acumular los egresos de stock necesarios
+  // Esto nos evita impactar la DB antes de abrir la transacción global
+  const egresosStockRequeridos: { articuloId: number; cantidadTotalDescontar: number }[] = [];
+
   for (const detalle of data.detalles) {
+    // Buscamos el plato e incluimos sus artículos relacionados (receta)
     const plato = await prisma.platos.findUnique({
       where: { id: detalle.platoId, deletedAt: null },
+      include: {
+        articulos: true // Trae la relación PlatoArticulo
+      }
     });
-
 
     if (!plato) {
       throw new NotFoundError(`El plato con ID ${detalle.platoId} no existe.`);
     }
 
+    // Guardar la estructura para los detalles de la comanda
     for (let i = 0; i < detalle.cantidad; i++) {
       detallesData.push({
         platoId: detalle.platoId,
         precioUnitario: detalle.precioUnitario ?? plato.precio,
       });
     }
+
+   for (const relacionArticulo of plato.articulos) {
+      
+      if (relacionArticulo.cantidad == null) {
+      throw new Error(
+        `La relación de artículo ${relacionArticulo.articuloId} no tiene cantidad definida.`
+        );
+      }
+
+
+      // Convertimos el Decimal de Prisma a un number de JS usando .toNumber()
+      const cantidadReceta = relacionArticulo.cantidad.toNumber(); 
+      const cantidadTotal = cantidadReceta * detalle.cantidad;
+      
+      const yaExiste = egresosStockRequeridos.find(e => e.articuloId === relacionArticulo.articuloId);
+      if (yaExiste) {
+        yaExiste.cantidadTotalDescontar += cantidadTotal;
+      } else {
+        egresosStockRequeridos.push({
+          articuloId: relacionArticulo.articuloId,
+          cantidadTotalDescontar: cantidadTotal
+        });
+      }
+    }
   }
+  // 2. Ejecutar todo en una transacción atómica (Todo o Nada)
+  return await prisma.$transaction(async (tx) => {
+    
+    // A) Procesar los movimientos de stock para cada artículo involucrado
+    for (const egreso of egresosStockRequeridos) {
+      // Buscamos la ficha de stock activa para el artículo
+      const stockRecord = await tx.stock.findFirst({
+        where: { articuloId: egreso.articuloId, deletedAt: null },
+      });
 
+      if (!stockRecord) {
+        throw new NotFoundError(
+          `No se encontró una ficha de stock activa para el artículo con ID ${egreso.articuloId}.`
+        );
+      }
 
+      // Crear el movimiento de stock tipo EGRESO
+      await tx.movimientoStock.create({
+        data: {
+          stockId: stockRecord.id,
+          tipoMov: "EGRESO",
+          cantidad: egreso.cantidadTotalDescontar,
+          fecha: new Date(),
+        },
+      });
 
-  return prisma.comanda.create({
-    data: {
-      clienteId: data.clienteId,
-      estadoComanda: data.estadoComanda,
-      fechaSolicitud: data.fechaSolicitud,
-      fechaEntrega: data.fechaEntrega,
-      direccionId: data.direccionId,
-      detalles: {
-        create: detallesData,
+      // Restar el stock acumulado (utiliza decrement o increment con valor negativo)
+      await tx.stock.update({
+        where: { id: stockRecord.id },
+        data: {
+          cantidad: {
+            decrement: egreso.cantidadTotalDescontar
+          }
+        },
+      });
+    }
+
+    // B) Crear la comanda con sus respectivos detalles
+    const nuevaComanda = await tx.comanda.create({
+      data: {
+        clienteId: data.clienteId,
+        estadoComanda: data.estadoComanda,
+        fechaSolicitud: data.fechaSolicitud,
+        fechaEntrega: data.fechaEntrega,
+        direccionId: data.direccionId,
+        detalles: {
+          create: detallesData,
+        },
       },
-    },
-    select: comandaSelect,
+      select: comandaSelect,
+    });
+
+    return nuevaComanda;
   });
 };
 
@@ -307,5 +376,5 @@ export const cancelarComandaService = async (comandaId: number) => {
     where: { id: comandaId },
     data: { estadoComanda: EstadoComanda.CANCELADO },
     select: comandaSelect,
-  });
-}
+  })
+};
