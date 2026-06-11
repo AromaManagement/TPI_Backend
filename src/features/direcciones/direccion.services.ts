@@ -113,7 +113,7 @@ export const deleteDireccionService = async (id: number) => {
   }
 
   // Verificar si hay comandas de aplicación activas asociadas a esta dirección
-  const activeComandasCount = await prisma.comandaAplicacion.count({
+  const activeComandasCount = await prisma.comanda.count({
     where: { direccionId: id, deletedAt: null },
   });
 

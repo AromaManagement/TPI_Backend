@@ -15,7 +15,7 @@ const articuloSelect = {
 };  
 
 export const createArticuloService = async (data: CreateArticuloDto) => {
-  const existing = await prisma.articulo.findUnique({
+  const existing = await prisma.articulo.findFirst({
     where: { nombre: data.nombre },
   });
 
@@ -76,7 +76,7 @@ export const updateArticuloService = async (id: number, data: UpdateArticuloDto)
   }
 
   if (data.nombre && data.nombre !== existing.nombre) {
-    const nameConflict = await prisma.articulo.findUnique({
+    const nameConflict = await prisma.articulo.findFirst({
       where: { nombre: data.nombre },
     });
 

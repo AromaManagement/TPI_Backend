@@ -20,6 +20,7 @@ export const CreateUserSchema = z.object({
   rol: RolEnum.default("CLIENTE"),
   tipoDocumento: z.string().max(50).optional(),
   documento: z.string().max(50).optional(),
+  telefono: z.string().max(20).optional(),
   nacimiento: z.string().datetime({ offset: true }).optional(),
   direccionId: z.number().int().positive().optional(),
 });

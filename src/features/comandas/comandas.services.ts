@@ -59,6 +59,7 @@ const comandaSelect = {
       id: true,
       nombre: true,
       apellido: true,
+      telefono: true,
     },
   },
   pago: true,

@@ -59,6 +59,7 @@ async function main() {
       nombre: "Admin",
       apellido: "Aromas",
       rol: "ADMIN",
+      telefono: "2610000000",
     },
   });
 
@@ -69,8 +70,8 @@ async function main() {
       contrasena: contrasenaHash,
       nombre: "Carlos",
       apellido: "Gómez",
-      telefono: "2614001122",
       rol: "REPARTIDOR",
+      telefono: "2610000001",
     },
   });
 
@@ -81,9 +82,9 @@ async function main() {
       contrasena: contrasenaHash,
       nombre: "Juan",
       apellido: "Pérez",
-      telefono: "2614009988",
       rol: "CLIENTE",
       direccionId: direccionCliente.id,
+      telefono: "2610000002",
     },
   });
 
