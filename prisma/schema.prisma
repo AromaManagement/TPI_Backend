@@ -72,6 +72,8 @@ model Localidad {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
+  direcciones Direccion[]
+
   @@map("localidad")
 }
 
@@ -86,12 +88,14 @@ model Direccion {
   numeracion  String?   @db.VarChar(20)
   referencia  String?   @db.VarChar(255)
   casaDepto   String?   @map("casa_depto") @db.VarChar(50)
+  localidadId Int       @map("localidad_id")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  usuarios Usuario[]
-  comandas Comanda[]
+  localidad Localidad @relation(fields: [localidadId], references: [id])
+  usuarios  Usuario[]
+  comandas  Comanda[]
 
   @@map("direccion")
 }
