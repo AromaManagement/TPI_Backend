@@ -7,7 +7,6 @@ export const CreateDireccionSchema = z.object({
   numeracion: z.string().max(20).optional().nullable(),
   referencia: z.string().max(255).optional().nullable(),
   casaDepto: z.string().max(50).optional().nullable(),
-  localidadId: z.number().int().positive().optional().nullable(),
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
   etiqueta: z.string().max(500).optional().nullable(),

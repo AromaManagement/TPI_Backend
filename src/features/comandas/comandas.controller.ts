@@ -4,6 +4,7 @@ import {
     getComandaByIdService,
     createComandaService,
     getActiveComandasByClienteIdService,
+    getHistorialByClienteIdService,
     getCommandasByEstadoService,
     assignRepartidorToComandaService,
     updateComandaEstadoService,
@@ -53,54 +54,65 @@ export const createComanda = async (req: AuthenticatedRequest, res: Response) =>
 
         const newComanda = await createComandaService(comandaData);
 
-        // Crear pago
-        const callbackUrl = req.body.callbackUrl;
+        // Crear pago — si algo falla aquí, cancelamos la comanda para no dejarla huérfana
         let pago = null as PagoData | null;
 
-        if (metodoPago === "EFECTIVO") {
-            pago = {
-                comandaId: newComanda.id,
-                monto: 0,
-                metodoPago: "EFECTIVO" as MetodoPago,
-                estadoPago: "ACEPTADO" as EstadoPago,
+        try {
+            if (metodoPago === "EFECTIVO") {
+                pago = {
+                    comandaId: newComanda.id,
+                    monto: 0,
+                    metodoPago: "EFECTIVO" as MetodoPago,
+                    estadoPago: "APROBADO" as EstadoPago,
+                };
+
+            } else if (metodoPago === "MERCADOPAGO") {
+                const comandaMp = {
+                    id: newComanda.id,
+                    detalles: newComanda.detalles.map(detalle => ({
+                        platoId: detalle.platoId,
+                        platoNombre: 'Plato ' + detalle.platoId,
+                        cantidad: 1,
+                        precioUnitario: detalle.precioUnitario,
+                    })),
+                } as ComandaData;
+
+                const mpPreference = await CreateMPPreference(comandaMp, undefined);
+
+                pago = {
+                    comandaId: newComanda.id,
+                    monto: comandaMp.detalles.reduce((total, d) => total + d.cantidad * Number(d.precioUnitario), 0),
+                    metodoPago: "MERCADOPAGO" as MetodoPago,
+                    estadoPago: "PENDIENTE" as EstadoPago,
+                    proveedorId: mpPreference.id,
+                    urlPago: mpPreference.init_point,
+                };
+
+            } else {
+                return res.status(400).json({
+                    status: "error",
+                    message: "Método de pago no soportado.",
+                });
             }
 
-        } else if (metodoPago === "MERCADOPAGO") {
-           // Crear preferencia de pago en MercadoPago
-            const comandaMp = {
-                id: newComanda.id,
-                detalles:  newComanda.detalles.map(detalle => ({
-                    platoId: detalle.platoId,
-                    platoNombre: 'Plato ' + detalle.platoId,
-                    cantidad: 1,
-                    precioUnitario: detalle.precioUnitario
-                }))
-            } as ComandaData;
+            await createPagoService(pago);
 
-            const mpPreference = await CreateMPPreference(comandaMp, callbackUrl);
-
-            pago = {
-                comandaId: newComanda.id,
-                monto: comandaMp.detalles.reduce((total, detalle) => total + (detalle.cantidad * Number(detalle.precioUnitario)), 0),
-                metodoPago: "MERCADOPAGO" as MetodoPago,
-                estadoPago: "PENDIENTE" as EstadoPago,
-                proveedorId: mpPreference.id,
-                urlPago: mpPreference.init_point
-            }
-
-        } else {
-            return res.status(400).json({
+        } catch (pagoError) {
+            // Si el pago/MP falla, cancelamos la comanda para no dejarla huérfana
+            console.error("Error al crear pago, cancelando comanda:", pagoError);
+            await cancelarComandaService(newComanda.id).catch(() => {});
+            return res.status(500).json({
                 status: "error",
-                message: "Método de pago no soportado.",
+                message: metodoPago === "MERCADOPAGO"
+                    ? "No se pudo conectar con MercadoPago. Intentá de nuevo."
+                    : "No se pudo registrar el pago. Intentá de nuevo.",
             });
         }
-        
-        await createPagoService(pago);
 
         return res.status(201).json({
             status: "success",
             message: "Comanda creada exitosamente.",
-            data: {...newComanda, pago},
+            data: { ...newComanda, pago },
         });
 
     } catch (error) {
@@ -137,6 +149,19 @@ export const getActiveComandaByClienteId = async (req: AuthenticatedRequest, res
             status: "error",
             message: "Ocurrió un error al obtener las comandas activas.",
         });
+    }
+};
+
+export const getHistorialCliente = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const clienteId = req.user?.id;
+        if (!clienteId) {
+            return res.status(401).json({ status: "error", message: "No estás autenticado." });
+        }
+        const historial = await getHistorialByClienteIdService(clienteId);
+        return res.status(200).json({ status: "success", data: historial });
+    } catch (error) {
+        return res.status(500).json({ status: "error", message: "Error al obtener el historial." });
     }
 };
 

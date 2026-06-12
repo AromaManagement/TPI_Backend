@@ -14,29 +14,30 @@ export const CreateMPPreference = async (comanda: ComandaData, callbackUrl: stri
     const preference = new Preference(client);
 
     const totalAmount = detalles.reduce((total, detalle) => {
-        return total + Number(detalle.precioUnitario) * detalle.cantidad;
+      return total + Number(detalle.precioUnitario) * detalle.cantidad;
     }, 0);
-    
+
     const result = await preference.create({
       body: {
         external_reference: `comanda-${comanda.id}`,
         items: [
-            {
-                id: `comanda-${comanda.id}`,
-                title: `Compra en Aromas - Comanda #${comanda.id}`,
-                quantity: 1,
-                unit_price: totalAmount,
-                currency_id: 'ARS',
-            }
+          {
+            id: `comanda-${comanda.id}`,
+            title: `Compra en Aromas - Comanda #${comanda.id}`,
+            quantity: 1,
+            unit_price: totalAmount,
+            currency_id: 'ARS',
+          }
         ],
         notification_url: `${process.env.WEBHOOK_URL}/api/pago/mercadopago`
       }
     });
 
+    console.log('Preferencia de MercadoPago creada:', result);
     return {
       id: result.id,
-      init_point: result.init_point, 
-      sandbox_init_point: result.sandbox_init_point 
+      init_point: result.init_point,
+      sandbox_init_point: result.sandbox_init_point
     };
 
   } catch (error) {

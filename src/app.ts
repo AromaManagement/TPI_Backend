@@ -5,7 +5,6 @@ import { load } from "js-yaml";
 import swaggerUi from "swagger-ui-express";
 import authRouter from "./features/auth/auth.routes.js";
 import userRouter from "./features/usuarios/usuario.routes.js";
-import localidadRouter from "./features/localidades/localidad.routes.js";
 import direccionRouter from "./features/direcciones/direccion.routes.js";
 import imagenRouter from "./features/imagenes/imagen.routes.js";
 import comandaRouter from "./features/comandas/comandas.routes.js";
@@ -23,6 +22,16 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const ms = Date.now() - start;
+    const color = res.statusCode >= 500 ? "\x1b[31m" : res.statusCode >= 400 ? "\x1b[33m" : "\x1b[32m";
+    console.log(`${color}${req.method}\x1b[0m ${req.originalUrl} → ${res.statusCode} (${ms}ms)`);
+  });
+  next();
+});
+
 const swaggerSpec = load(
   readFileSync(new URL("../openapi.yaml", import.meta.url), "utf8"),
 ) as object;
@@ -30,7 +39,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/auth", authRouter);
 app.use("/api/usuarios", userRouter);
-app.use("/api/localidades", localidadRouter);
 app.use("/api/direcciones", direccionRouter);
 app.use("/api/imagenes", imagenRouter);
 app.use("/api/comandas", comandaRouter);

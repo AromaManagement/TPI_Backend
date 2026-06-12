@@ -63,21 +63,6 @@ enum MetodoPago {
 }
 
 // ----------------------------
-// LOCALIDAD
-// ----------------------------
-model Localidad {
-  id        Int       @id @default(autoincrement())
-  nombre    String    @db.VarChar(150)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  direcciones Direccion[]
-
-  @@map("localidad")
-}
-
-// ----------------------------
 // DIRECCION
 // ----------------------------
 model Direccion {
@@ -88,7 +73,6 @@ model Direccion {
   numeracion  String?   @db.VarChar(20)
   referencia  String?   @db.VarChar(255)
   casaDepto   String?   @map("casa_depto") @db.VarChar(50)
-  localidadId Int?      @map("localidad_id")
   lat         Float?    @map("lat")
   lng         Float?    @map("lng")
   etiqueta    String?   @map("etiqueta") @db.VarChar(500)
@@ -96,9 +80,8 @@ model Direccion {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  localidad Localidad? @relation(fields: [localidadId], references: [id])
-  usuarios  Usuario[]
-  comandas  Comanda[]
+  usuarios Usuario[]
+  comandas Comanda[]
 
   @@map("direccion")
 }

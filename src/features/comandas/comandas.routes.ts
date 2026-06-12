@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createComanda,
   getActiveComandaByClienteId,
+  getHistorialCliente,
   getCommandasByEstado,
   assignRepartidorToComanda,
   assignChefToComandaDetalle,
@@ -19,6 +20,7 @@ router.use(authenticateJWT);
 
 router.post("/", requireRole("CLIENTE"), createComanda);
 router.get("/active", requireRole("CLIENTE"), getActiveComandaByClienteId);
+router.get("/historial", requireRole("CLIENTE"), getHistorialCliente);
 router.get("/estado/:estado", requireRole("ADMIN", "COCINERO", "REPARTIDOR"), getCommandasByEstado);
 router.post("/assign-repartidor", requireRole("REPARTIDOR"), assignRepartidorToComanda);
 router.post("/assign-chef", requireRole("COCINERO", "ADMIN"), assignChefToComandaDetalle);

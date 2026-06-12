@@ -112,9 +112,9 @@ export const getCartaDisponiblesService = async () => {
 
 const resultadoFiltrado = seccionesDeLaCarta.map(seccion => {
     const platosConStock = seccion.platos.filter(plato => {
-      
+
       if (!plato.articulos || plato.articulos.length === 0) {
-        return false;
+        return true;
       }
 
       return plato.articulos.every(platoArticulo => {

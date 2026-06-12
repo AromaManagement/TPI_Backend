@@ -19,7 +19,6 @@ async function main() {
   await prisma.carta.deleteMany({});
   await prisma.usuario.deleteMany({});
   await prisma.direccion.deleteMany({});
-  await prisma.localidad.deleteMany({});
 
   console.log("✓ Base de datos limpia.");
 

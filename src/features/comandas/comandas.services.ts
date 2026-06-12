@@ -220,6 +220,18 @@ export const getActiveComandasByClienteIdService = async (clienteId: number) => 
   });
 }
 
+export const getHistorialByClienteIdService = async (clienteId: number) => {
+  return prisma.comanda.findMany({
+    where: {
+      clienteId,
+      deletedAt: null,
+      estadoComanda: { in: ["ENTREGADO", "CANCELADO"] },
+    },
+    select: comandaSelect,
+    orderBy: { createdAt: "desc" },
+  });
+};
+
 export const updateComandaEstadoService = async (id: number, nuevoEstado: string) => {
   const comanda = await prisma.comanda.findUnique({
     where: { id, deletedAt: null },
