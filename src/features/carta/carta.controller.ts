@@ -6,6 +6,7 @@ import {
     updateCartaService,
     deleteCartaService,
     getCartaDisponiblesService,
+    getCartaAdminService,
 } from './carta.services.js';
 import type { CreateCartaDtoType, UpdateCartaDtoType } from './carta.dto.js';
 
@@ -64,6 +65,24 @@ export const deleteCarta = async (req: Request, res: Response) => {
         status: 'success',
         message: 'Carta eliminada exitosamente.',
     });
+};
+
+/** Vista completa para el panel de administración (sin filtro de stock). */
+export const getCartaAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const carta = await getCartaAdminService();
+    res.status(200).json({
+      status: "success",
+      message: "Carta admin recuperada exitosamente.",
+      data: carta,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**

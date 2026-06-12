@@ -32,7 +32,8 @@ export const CreatePlatoSchema = z.object({
     .nullable(),
   articulos: z
     .array(PlatoArticuloInputSchema)
-    .min(1, "Un plato debe tener al menos un artículo o ingrediente asociado"),
+    .optional()
+    .default([]),
 });
 
 export type CreatePlatoDto = z.infer<typeof CreatePlatoSchema>;

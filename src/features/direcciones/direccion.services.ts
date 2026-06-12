@@ -11,6 +11,9 @@ const direccionSelect = {
   referencia: true,
   casaDepto: true,
   localidadId: true,
+  lat: true,
+  lng: true,
+  etiqueta: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -23,15 +26,13 @@ const direccionSelect = {
 };
 
 export const createDireccionService = async (data: CreateDireccionDto) => {
-  // Validar existencia de la localidad asociada
-  const localidadExists = await prisma.localidad.findUnique({
-    where: { id: data.localidadId, deletedAt: null },
-  });
-
-  if (!localidadExists) {
-    throw new NotFoundError(
-      `La localidad con ID ${data.localidadId} no existe.`
-    );
+  if (data.localidadId) {
+    const localidadExists = await prisma.localidad.findUnique({
+      where: { id: data.localidadId, deletedAt: null },
+    });
+    if (!localidadExists) {
+      throw new NotFoundError(`La localidad con ID ${data.localidadId} no existe.`);
+    }
   }
 
   return await prisma.direccion.create({

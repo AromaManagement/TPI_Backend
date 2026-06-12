@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import type { CreatePlatoDto } from "./plato.dto.js";
+import type { CreatePlatoDto, UpdatePlatoDto } from "./plato.dto.js";
 
 export const createPlatoService = async (data: CreatePlatoDto) => {
   const { seccionId, nombre, precio, detalle, imagenId, articulos } = data;
@@ -70,7 +70,7 @@ export const getPlatoByIdService = async (id: number) => {
   });
 };
 
-export const updatePlatoService = async (id: number, data: CreatePlatoDto) => {
+export const updatePlatoService = async (id: number, data: UpdatePlatoDto) => {
   const { seccionId, nombre, precio, detalle, imagenId, articulos } = data;
 
   return await prisma.$transaction(async (tx) => {
@@ -104,19 +104,19 @@ export const updatePlatoService = async (id: number, data: CreatePlatoDto) => {
       },
     });
 
-    // Elimina las relaciones existentes con los artículos
-    await tx.platoArticulo.deleteMany({
-      where: { platoId: id },
-    });
-
-    // Crea nuevas relaciones con los artículos proporcionados
-    await tx.platoArticulo.createMany({
-      data: articulos.map((articulo) => ({
-        platoId: id,
-        articuloId: articulo.articuloId,
-        cantidad: articulo.cantidad,
-      })),
-    });
+    // Sólo actualiza articulos si se enviaron en el body
+    if (articulos !== undefined) {
+      await tx.platoArticulo.deleteMany({ where: { platoId: id } });
+      if (articulos.length > 0) {
+        await tx.platoArticulo.createMany({
+          data: articulos.map((articulo) => ({
+            platoId: id,
+            articuloId: articulo.articuloId,
+            cantidad: articulo.cantidad,
+          })),
+        });
+      }
+    }
 
     // Retorna el plato actualizado con sus relaciones --- IGNORE ---
     return platoActualizado;

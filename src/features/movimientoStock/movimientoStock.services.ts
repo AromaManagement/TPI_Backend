@@ -7,6 +7,7 @@ const movimientoStockSelect = {
   stockId: true,
   cantidad: true,
   tipoMov: true,
+  fecha: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,

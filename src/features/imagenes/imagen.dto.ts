@@ -3,8 +3,7 @@ import { z } from "zod";
 export const CreateImagenSchema = z.object({
   imagenSi: z
     .string({ message: "La URL o ruta de la imagen es requerida" })
-    .min(1, "La URL o ruta de la imagen no puede estar vacía")
-    .max(500, "La URL o ruta de la imagen no puede tener más de 500 caracteres"),
+    .min(1, "La URL o ruta de la imagen no puede estar vacía"),
 });
 
 export type CreateImagenDto = z.infer<typeof CreateImagenSchema>;

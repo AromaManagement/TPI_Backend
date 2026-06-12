@@ -93,13 +93,14 @@ export const getCartaDisponiblesService = async () => {
     },
     include: {
       platos: {
-        where: { deletedAt: null }, 
+        where: { deletedAt: null },
         include: {
-          articulos: { 
+          imagen: true,
+          articulos: {
             include: {
               articulo: {
                 include: {
-                  stock: true 
+                  stock: true
                 }
               }
             }
@@ -128,9 +129,11 @@ const resultadoFiltrado = seccionesDeLaCarta.map(seccion => {
         id: plato.id,
         seccionId: plato.seccionId,
         nombre: plato.nombre,
-        precio: plato.precio,
+        precio: Number(plato.precio),
         detalle: plato.detalle,
         imagenId: plato.imagenId,
+        imagen: plato.imagen ? { id: plato.imagen.id, imagenSi: plato.imagen.imagenSi } : null,
+        disponible: true,
         createdAt: plato.createdAt,
         updatedAt: plato.updatedAt,
         deletedAt: plato.deletedAt
@@ -150,5 +153,87 @@ const resultadoFiltrado = seccionesDeLaCarta.map(seccion => {
   })
   .filter(seccion => seccion.platos.length > 0);
 
-  return resultadoFiltrado;
+  return {
+    id: ultimaCarta.id,
+    secciones: resultadoFiltrado,
+  };
+};
+
+/** Vista completa de la carta para el panel de administración.
+ *  Devuelve todas las secciones y platos (sin filtrar por stock),
+ *  con ingredientes enriquecidos con stock actual.
+ *  Si no existe ninguna carta activa, crea una vacía.
+ */
+export const getCartaAdminService = async () => {
+  let carta = await prisma.carta.findFirst({
+    where: { deletedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!carta) {
+    carta = await prisma.carta.create({ data: {} });
+  }
+
+  const secciones = await prisma.secciones.findMany({
+    where: { cartaId: carta.id, deletedAt: null },
+    include: {
+      platos: {
+        where: { deletedAt: null },
+        include: {
+          imagen: true,
+          articulos: {
+            include: {
+              articulo: {
+                include: { stock: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return {
+    id: carta.id,
+    createdAt: carta.createdAt,
+    updatedAt: carta.updatedAt,
+    deletedAt: carta.deletedAt,
+    secciones: secciones.map((s) => ({
+      id: s.id,
+      cartaId: s.cartaId,
+      nombre: s.nombre,
+      detalle: s.detalle,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      deletedAt: s.deletedAt,
+      platos: s.platos.map((p) => {
+        const ingredientes = p.articulos.map((pa) => ({
+          articuloId: pa.articuloId,
+          nombre: pa.articulo.nombre,
+          cantidad: Number(pa.cantidad),
+          unidadMedida: pa.articulo.unidadMedida,
+          stockActual: Number(pa.articulo.stock?.cantidad ?? 0),
+        }));
+        return {
+          id: p.id,
+          seccionId: p.seccionId,
+          nombre: p.nombre,
+          precio: Number(p.precio),
+          detalle: p.detalle,
+          imagenId: p.imagenId,
+          imagen: p.imagen ? { id: p.imagen.id, imagenSi: p.imagen.imagenSi } : null,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          deletedAt: p.deletedAt,
+          ingredientes,
+          disponible:
+            ingredientes.length === 0
+              ? null
+              : ingredientes.every((i) => i.stockActual >= i.cantidad),
+        };
+      }),
+    })),
+  };
 };
